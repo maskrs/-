@@ -665,7 +665,7 @@
     <property name="geometry">
      <rect>
       <x>42</x>
-      <y>381</y>
+      <y>380</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -687,7 +687,7 @@
     <property name="geometry">
      <rect>
       <x>110</x>
-      <y>381</y>
+      <y>380</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -804,7 +804,7 @@
     <property name="geometry">
      <rect>
       <x>180</x>
-      <y>381</y>
+      <y>380</y>
       <width>70</width>
       <height>16</height>
      </rect>
@@ -823,6 +823,28 @@
     </property>
     <property name="text">
      <string>白骨商人</string>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cb_jidian">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>380</y>
+      <width>59</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>奇  点</string>
     </property>
     <property name="checked">
      <bool>false</bool>

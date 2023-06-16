@@ -97,7 +97,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
         moveclick(141, 109, 1, 1)  # 打开角色按钮
         back_first()
-        custom_select.search_killer_name(31)## 随版本更改
+        custom_select.search_killer_name(32)## 随版本更改
 
     def github(self):
         webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL")
@@ -128,6 +128,7 @@ class SelectWindow(QDialog, Ui_Dialog):
 
     def pb_select_all_click(self):
         """全选点击槽"""
+        # 随版本更改
         self.select_ui.cb_jiage.setChecked(True)
         self.select_ui.cb_dingdang.setChecked(True)
         self.select_ui.cb_dianjv.setChecked(True)
@@ -158,8 +159,11 @@ class SelectWindow(QDialog, Ui_Dialog):
         self.select_ui.cb_yingmo.setChecked(True)
         self.select_ui.cb_weishu.setChecked(True)
         self.select_ui.cb_eqishi.setChecked(True)
+        self.select_ui.cb_baigu.setChecked(True)
+        self.select_ui.cb_jidian.setChecked(True)
 
     def pb_invert_click(self):
+        # 随版本更改
         self.select_ui.cb_jiage.toggle()
         self.select_ui.cb_dingdang.toggle()
         self.select_ui.cb_dianjv.toggle()
@@ -190,6 +194,8 @@ class SelectWindow(QDialog, Ui_Dialog):
         self.select_ui.cb_yingmo.toggle()
         self.select_ui.cb_weishu.toggle()
         self.select_ui.cb_eqishi.toggle()
+        self.select_ui.cb_baigu.toggle()
+        self.select_ui.cb_jidian.toggle()
 
     def pb_save_click(self):
         save_cfg()
@@ -205,7 +211,7 @@ class CustomSelectKiller:
         self.all_killer_name = ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
                                 "食人魔", "梦魇", "门徒", "小丑", "怨灵", "军团", "瘟疫", "鬼面", "魔王", "鬼武士",
                                 "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS", "地狱修士", "艺术家",
-                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人"]
+                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"]
 
     def read_search_killer_name(self):
         with open(SEARCH_PATH, "r", encoding='UTF-8') as search_file:
@@ -214,13 +220,14 @@ class CustomSelectKiller:
 
 
     def killer_name_ocr(self):
-        killername = Coord(284, 31, 688, 146)
+        killername = Coord(373, 0, 657, 160)
         killername.processed_coord()
         killername.area_check()
-        self.killer_name = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.y2_coor, "#95", 0.75)
+        self.killer_name = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.y2_coor,
+                                  "#125", 0.90)
         if self.killer_name in self.all_killer_name:
             self.write_killer_name()
-            if self.killer_name == "白骨商人":  # 随版本更改
+            if self.killer_name == "奇点":  # 随版本更改
                 self.ocr_error = 1
                 back_first()
                 moveclick(387, 300, 1, 1)
@@ -235,10 +242,11 @@ class CustomSelectKiller:
                     search_file.write("\n".join(self.killer_name_array))
                 self.killer_name_array.clear()
         else:
-            killername = Coord(172, 1, 435, 141)
+            killername = Coord(239, 0, 359, 196)
             killername.processed_coord()
             killername.area_check()
-            self.ocr_notown = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername. y2_coor, "#95", 0.75)
+            self.ocr_notown = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.
+                                     y2_coor, "#125", 0.90)
             if self.ocr_notown == "角色":
                 self.ocr_error = 1
                 py.keyDown('esc')
@@ -430,6 +438,8 @@ class CustomSelectKiller:
             self.select_killer_lst.append("恶骑士")
         if settings.value("CUSSEC/cb_baigu"):
             self.select_killer_lst.append("白骨商人")
+        if settings.value("CUSSEC/cb_jidian"):
+            self.select_killer_lst.append("奇点")
 
     def match_select_killer_name(self):
         for i in self.select_killer_lst:
@@ -444,8 +454,7 @@ class CustomSelectKiller:
 
 def initialize():
     """ 程序初始化 """
-    # if not os.path.exists(DBDAS_PATH):
-    #     os.makedirs(DBDAS_PATH)
+    # 随版本更改
     if not os.path.exists(CFG_PATH):
         with open(CFG_PATH, 'w') as configfile:
             configfile.write("")
@@ -456,11 +465,6 @@ def initialize():
         settings.setValue("CPCI/rb_fixed_mode", False)
         settings.setValue("CPCI/rb_random_mode", False)
         settings.setValue("CPCI/rb_no_action", False)
-        # settings.setValue("CPCI/rb_single_mode", False)
-        # settings.setValue("CPCI/rb_rotate_mode", False)
-        # settings.setValue("CPCI/cb_select_killer", False)
-        # settings.setValue("CPCI/cb_rotate_solo", False)
-        # settings.setValue("CPCI/cb_rotate_order", False)
         settings.setValue("UPDATE/cb_autocheck", True)
         settings.setValue("CUSSEC/cb_jiage", False)
         settings.setValue("CUSSEC/cb_dingdang", False)
@@ -493,9 +497,11 @@ def initialize():
         settings.setValue("CUSSEC/cb_weishu", False)
         settings.setValue("CUSSEC/cb_eqishi", False)
         settings.setValue("CUSSEC/cb_baigu", False)
+        settings.setValue("CUSSEC/cb_jidian", False)
 
 def save_cfg():
     """ 保存配置文件 """
+    # 随版本更改
     settings.setValue("CPCI/rb_survivor", dbd_window.main_ui.rb_survivor.isChecked())
     settings.setValue("CPCI/cb_survivor_do", dbd_window.main_ui.cb_survivor_do.isChecked())
     settings.setValue("CPCI/rb_killer", dbd_window.main_ui.rb_killer.isChecked())
@@ -503,11 +509,6 @@ def save_cfg():
     settings.setValue("CPCI/rb_fixed_mode", dbd_window.main_ui.rb_fixed_mode.isChecked())
     settings.setValue("CPCI/rb_random_mode", dbd_window.main_ui.rb_random_mode.isChecked())
     settings.setValue("CPCI/rb_no_action", dbd_window.main_ui.rb_no_action.isChecked())
-    # settings.setValue("CPCI/rb_single_mode", dbd_window.main_ui.rb_single_mode.isChecked())
-    # settings.setValue("CPCI/rb_rotate_mode", dbd_window.main_ui.rb_rotate_mode.isChecked())
-    # settings.setValue("CPCI/cb_select_killer", dbd_window.main_ui.cb_select_killer.isChecked())
-    # settings.setValue("CPCI/cb_rotate_solo", dbd_window.main_ui.cb_rotate_solo.isChecked())
-    # settings.setValue("CPCI/cb_rotate_order", dbd_window.main_ui.cb_rotate_order.isChecked())
     settings.setValue("UPDATE/cb_autocheck", dbd_window.main_ui.cb_autocheck.isChecked())
     settings.setValue("CUSSEC/cb_jiage", dbd_window.sel_dialog.select_ui.cb_jiage.isChecked())
     settings.setValue("CUSSEC/cb_dingdang", dbd_window.sel_dialog.select_ui.cb_dingdang.isChecked())
@@ -540,9 +541,11 @@ def save_cfg():
     settings.setValue("CUSSEC/cb_weishu", dbd_window.sel_dialog.select_ui.cb_weishu.isChecked())
     settings.setValue("CUSSEC/cb_eqishi", dbd_window.sel_dialog.select_ui.cb_eqishi.isChecked())
     settings.setValue("CUSSEC/cb_baigu", dbd_window.sel_dialog.select_ui.cb_baigu.isChecked())
+    settings.setValue("CUSSEC/cb_jidian", dbd_window.sel_dialog.select_ui.cb_jidian.isChecked())
 
 def read_cfg():
     """读取配置文件"""
+    # 随版本更改
     dbd_window.main_ui.rb_survivor.setChecked(json.loads(settings.value("CPCI/rb_survivor")))
     dbd_window.main_ui.cb_survivor_do.setChecked(json.loads(settings.value("CPCI/cb_survivor_do")))
     dbd_window.main_ui.rb_killer.setChecked(json.loads(settings.value("CPCI/rb_killer")))
@@ -550,11 +553,6 @@ def read_cfg():
     dbd_window.main_ui.rb_fixed_mode.setChecked(json.loads(settings.value("CPCI/rb_fixed_mode")))
     dbd_window.main_ui.rb_random_mode.setChecked(json.loads(settings.value("CPCI/rb_random_mode")))
     dbd_window.main_ui.rb_no_action.setChecked(json.loads(settings.value("CPCI/rb_no_action")))
-    # dbd_window.main_ui.rb_single_mode.setChecked(json.loads(settings.value("CPCI/rb_single_mode")))
-    # dbd_window.main_ui.rb_rotate_mode.setChecked(json.loads(settings.value("CPCI/rb_rotate_mode")))
-    # dbd_window.main_ui.cb_select_killer.setChecked(json.loads(settings.value("CPCI/cb_select_killer")))
-    # dbd_window.main_ui.cb_rotate_solo.setChecked(json.loads(settings.value("CPCI/cb_rotate_solo")))
-    # dbd_window.main_ui.cb_rotate_order.setChecked(json.loads(settings.value("CPCI/cb_rotate_order")))
     dbd_window.main_ui.cb_autocheck.setChecked(json.loads(settings.value("UPDATE/cb_autocheck")))
     dbd_window.sel_dialog.select_ui.cb_jiage.setChecked(json.loads(settings.value("CUSSEC/cb_jiage")))
     dbd_window.sel_dialog.select_ui.cb_dingdang.setChecked(json.loads(settings.value("CUSSEC/cb_dingdang")))
@@ -587,6 +585,7 @@ def read_cfg():
     dbd_window.sel_dialog.select_ui.cb_weishu.setChecked(json.loads(settings.value("CUSSEC/cb_weishu")))
     dbd_window.sel_dialog.select_ui.cb_eqishi.setChecked(json.loads(settings.value("CUSSEC/cb_eqishi")))
     dbd_window.sel_dialog.select_ui.cb_baigu.setChecked(json.loads(settings.value("CUSSEC/cb_baigu")))
+    dbd_window.sel_dialog.select_ui.cb_jidian.setChecked(json.loads(settings.value("CUSSEC/cb_jidian")))
     if settings.value("CPCI/rb_survivor") == "true":
         dbd_window.main_ui.cb_survivor_do.setEnabled(True)
         dbd_window.main_ui.rb_fixed_mode.setDisabled(True)
@@ -628,7 +627,7 @@ def authorization():
 
 def update():
     '''check the update'''
-    ver_now = 'V5.0.7'
+    ver_now = 'V5.0.8'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -656,13 +655,14 @@ def hall_tip():
 
 def auto_space():
     '''Child thread, auto press space'''
-    autospace = False
-    while eq(autospace, False):
-        key_down(hwnd, 'space')
-        # time.sleep(2)
-        key_up(hwnd, 'space')
-        if eq(blood_and_ceasma(), True):
-            autospace = True
+    global autospace_judge
+    global hwnd
+    autospace_thread = True
+    while eq(autospace_thread, True):
+        if eq(autospace_judge, True):
+            key_down(hwnd, 'space')
+            time.sleep(0.5)
+            key_up(hwnd, 'space')
 
 
 def listen_key(pid):
@@ -676,7 +676,7 @@ def listen_key(pid):
         kill = psutil.Process(pid)
         # begingame._stop_event = threading.Event()
         def openexe():
-            os.startfile(os.path.join(BASE_DIR, "DBD_AFK_TOOL.V5.0.7.exe"))
+            os.startfile(os.path.join(BASE_DIR, "DBD_AFK_TOOL.exe"))
         open_exe = threading.Thread(target=openexe, daemon=True)
         open_exe.start()
         time.sleep(1.5)
@@ -917,7 +917,9 @@ def reconnect():
             moveclick(1430, 744, click_delay=1)  # 账号连接
             moveclick(1631, 966, click_delay=1)  # 转生系统
             if eq(blood_and_ceasma(), True):
-                moveclick(1761, 1009, 3, 1)
+                while eq(blood_and_ceasma(), True):
+                    moveclick(0, 0, 0.5, 1)
+                    moveclick(1761, 1009, 3, 1)
                 return True
             # 判断每日祭礼
             if eq(daily_ritual_main(), True):
@@ -1061,7 +1063,7 @@ def killer_action():
     key_up(hwnd, act_direction)
     key_up(hwnd, act_move)
     # 技能[右键左键]
-    need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔"]
+    need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点"]
     if custom_select.select_killer_lst[character_num_b-1] in need_lst:
         act_move = random_movement()
         key_down(hwnd, act_move)
@@ -1292,6 +1294,7 @@ def character_selection():
 def AFK():
     # hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
     global hwnd
+    global autospace_judge
     custom_select.select_killer_name()
     list_number = len(custom_select.select_killer_lst)
     # 判断游戏是否运行
@@ -1318,13 +1321,13 @@ def AFK():
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-
     # 创建子线程
     tip = threading.Thread(target=hall_tip, daemon=True)
     autospace = threading.Thread(target=auto_space, daemon=True)
+    # 启动子线程
+    autospace.start()
     while True:
         reconnection = False
-
         '''
         匹配
 
@@ -1394,11 +1397,13 @@ def AFK():
         ready_room = False
         while ready_room == False:
             if eq(setting_button(), True):
-                time.sleep(3)
+                time.sleep(5)
                 # 如果开启提醒，则开启进程
                 if eq(settings.value("CPCI/rb_survivor"), True) and eq(settings.value("CPCI/cb_survivor_do"), True):
                     tip.start()
                 while eq(ready_red(), False):
+                    if eq(disconnect_check(), True):
+                        break
                     moveclick(1, 1, 2, 2)
                     moveclick(1742, 931, 2, 0.5)
                     moveclick(20, 689)  # 商城上空白
@@ -1431,9 +1436,10 @@ def AFK():
         局内
         '''
         game = False
-        autospace.start()
         while game == False:
             if eq(blood_and_ceasma(), True):
+                autospace_judge = False
+                moveclick(0, 0, 0.5, 1)
                 time.sleep(2)
                 # 段位重置
                 if eq(segment_reset(), True):
@@ -1461,6 +1467,7 @@ def AFK():
                 if eq(disconnect_check(), True):
                     reconnection = reconnect()
                     game = True
+                    autospace_judge = False
 
         # 重连返回值判断
         if eq(reconnection, True):
@@ -1589,6 +1596,7 @@ if __name__ == '__main__':
     behind_times = 0  # 不可上升后的循环次数
     click_times = 1  # 角色点击次数，判断与输入值是否相等
     x, y = 548, 323  # 初始的坐标值[Second]
+    autospace_judge = False
     # input_num = dbd_window.main_ui.sb_input_count.value()  # 输入值
     # 角色选择的参数
     ghX = [405, 548, 703, 854]

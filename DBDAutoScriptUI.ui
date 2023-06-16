@@ -397,7 +397,20 @@ QPushButton:hover {
        </rect>
       </property>
       <property name="text">
-       <string>ver 5.0.7</string>
+       <string>ver 5.0.8</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="lb_message">
+      <property name="geometry">
+       <rect>
+        <x>120</x>
+        <y>118</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Q群：728284728</string>
       </property>
      </widget>
     </widget>
@@ -638,80 +651,32 @@ QPushButton:hover {
   <connection>
    <sender>rb_no_action</sender>
    <signal>clicked(bool)</signal>
-   <receiver>pb_research</receiver>
+   <receiver>pb_select_cfg</receiver>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>242</x>
-     <y>128</y>
+     <x>241</x>
+     <y>129</y>
     </hint>
     <hint type="destinationlabel">
-     <x>86</x>
-     <y>204</y>
+     <x>242</x>
+     <y>210</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>rb_no_action</sender>
    <signal>clicked(bool)</signal>
-   <receiver>pb_select_cfg</receiver>
+   <receiver>pb_research</receiver>
    <slot>setDisabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>239</x>
-     <y>131</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>243</x>
-     <y>210</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb_fixed_mode</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>pb_research</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>83</x>
-     <y>130</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>80</x>
-     <y>207</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb_fixed_mode</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>pb_select_cfg</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>93</x>
-     <y>130</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>211</x>
-     <y>218</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb_random_mode</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>pb_research</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>151</x>
+     <x>227</x>
      <y>128</y>
     </hint>
     <hint type="destinationlabel">
-     <x>116</x>
-     <y>221</y>
+     <x>88</x>
+     <y>212</y>
     </hint>
    </hints>
   </connection>
@@ -722,12 +687,60 @@ QPushButton:hover {
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>180</x>
-     <y>127</y>
+     <x>149</x>
+     <y>131</y>
     </hint>
     <hint type="destinationlabel">
-     <x>225</x>
-     <y>204</y>
+     <x>208</x>
+     <y>209</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rb_random_mode</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>pb_research</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>137</x>
+     <y>129</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>109</x>
+     <y>214</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rb_fixed_mode</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>pb_select_cfg</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>126</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>212</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rb_fixed_mode</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>pb_research</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>65</x>
+     <y>126</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>64</x>
+     <y>211</y>
     </hint>
    </hints>
   </connection>
