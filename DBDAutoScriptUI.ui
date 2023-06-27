@@ -61,12 +61,15 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>54</width>
-        <height>12</height>
+        <width>101</width>
+        <height>16</height>
        </rect>
       </property>
+      <property name="whatsThis">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
       <property name="text">
-       <string>选择阵营</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;◇ 选 择 阵 营&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
      <widget class="QRadioButton" name="rb_survivor">
@@ -129,12 +132,12 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>54</width>
-        <height>12</height>
+        <width>101</width>
+        <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>选择行为</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;◇ 选 择 行 为&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
      <widget class="QRadioButton" name="rb_fixed_mode">
@@ -210,12 +213,12 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>54</width>
-        <height>12</height>
+        <width>101</width>
+        <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>选择角色</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;◇ 选 择 角 色&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_research">
@@ -228,7 +231,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>检索</string>
+       <string>检 索</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_select_cfg">
@@ -241,7 +244,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>配置</string>
+       <string>配 置</string>
       </property>
      </widget>
      <widget class="Line" name="line_3">
@@ -344,7 +347,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>开始</string>
+       <string>开 始</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_stop">
@@ -357,7 +360,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>停止</string>
+       <string>停 止</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_github">
@@ -396,8 +399,11 @@ QPushButton:hover {
         <height>12</height>
        </rect>
       </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(130, 60, 200);</string>
+      </property>
       <property name="text">
-       <string>ver 5.0.8</string>
+       <string>ver 5.0.9</string>
       </property>
      </widget>
      <widget class="QLabel" name="lb_message">
@@ -408,6 +414,9 @@ QPushButton:hover {
         <width>91</width>
         <height>16</height>
        </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(255, 0, 0);</string>
       </property>
       <property name="text">
        <string>Q群：728284728</string>

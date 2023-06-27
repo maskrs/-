@@ -627,7 +627,7 @@ def authorization():
 
 def update():
     '''check the update'''
-    ver_now = 'V5.0.8'
+    ver_now = 'V5.0.9'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -748,7 +748,7 @@ def ready_red():
     ready_redXY = Coord(1794, 983, 1850, 1037)
     ready_redXY.processed_coord()
     ready_redXY.area_check()
-    ret1, ret2 = ready_redXY.find_color("F00000-000000")
+    ret1, ret2 = ready_redXY.find_color("EE0101-000000")
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
