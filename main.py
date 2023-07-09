@@ -8,6 +8,7 @@ import pyautogui as py
 import requests, re
 import win32gui
 import win32api
+import jsonlines
 from keyboard_operation import key_down, key_up
 from operator import lt, eq, gt, ge, ne, floordiv, mod
 from pynput import keyboard
@@ -20,6 +21,7 @@ from PyQt5.QtGui import QIcon
 import PyQt5.QtCore as qc
 from DBDAutoScriptUI import Ui_MainWindow
 from selec_killerUI import Ui_Dialog
+from AdvancedParameterUI import Ui_AdvancedWindow
 from Coord import *
 
 
@@ -41,6 +43,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.main_ui = Ui_MainWindow()
         self.sel_dialog = SelectWindow()
+        self.advanced_ui = AdvancedWindow()
         qss_style = '''
             QPushButton:hover {
                 background-color: #EEF1F2;
@@ -83,6 +86,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.setupUi(self)
         # self.main_ui.sb_input_count.setMaximum(30)
         self.main_ui.pb_select_cfg.clicked.connect(self.pb_select_cfg_click)
+        self.main_ui.pb_advanced.clicked.connect(self.pb_advanced_click)
         # self.main_ui.cb_rotate_solo.clicked.connect(self.cb_rotate_solo_click)
         # self.main_ui.cb_rotate_order.clicked.connect(self.cb_rotate_order_click)
         # self.main_ui.cb_select_killer.clicked.connect(self.cb_select_killer_click)
@@ -92,18 +96,22 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.pb_github.clicked.connect(self.github)
 
     def pb_research_click(self):
+        global killer_number
         lw.SetDict(0, "DbdKillerNames.txt")  # 设置字库
         win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
         moveclick(141, 109, 1, 1)  # 打开角色按钮
         back_first()
-        custom_select.search_killer_name(32)## 随版本更改
+        custom_select.search_killer_name(killer_number)  # 随版本更改
 
     def github(self):
         webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL")
 
     def pb_select_cfg_click(self):
         self.sel_dialog.exec()
+
+    def pb_advanced_click(self):
+        self.advanced_ui.exec()
     #
     # def cb_rotate_solo_click(self):
     #     self.main_ui.cb_rotate_order.setChecked(False)
@@ -200,7 +208,15 @@ class SelectWindow(QDialog, Ui_Dialog):
     def pb_save_click(self):
         save_cfg()
 
+class AdvancedWindow(QDialog, Ui_AdvancedWindow):
+    def __init__(self):
+        super().__init__()
+        self.advanced_ui = Ui_AdvancedWindow()
+        self.advanced_ui.setupUi(self)
+
+
 class CustomSelectKiller:
+    global self_defined_parameter
     def __init__(self):
         self.ocr_error = 0
         self.killer_name_array = []
@@ -208,10 +224,7 @@ class CustomSelectKiller:
         self.select_killer_lst = []
         self.match_select_killer_lst = []
         # 随版本更改
-        self.all_killer_name = ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
-                                "食人魔", "梦魇", "门徒", "小丑", "怨灵", "军团", "瘟疫", "鬼面", "魔王", "鬼武士",
-                                "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS", "地狱修士", "艺术家",
-                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"]
+        self.all_killer_name = self_defined_parameter['all_killer_name']
 
     def read_search_killer_name(self):
         with open(SEARCH_PATH, "r", encoding='UTF-8') as search_file:
@@ -249,6 +262,7 @@ class CustomSelectKiller:
                                      y2_coor, "#125", 0.90)
             if self.ocr_notown == "角色":
                 self.ocr_error = 1
+                time.sleep(2)
                 py.keyDown('esc')
                 py.keyUp('esc')
                 time.sleep(1)
@@ -455,6 +469,7 @@ class CustomSelectKiller:
 def initialize():
     """ 程序初始化 """
     # 随版本更改
+    global self_defined_parameter
     if not os.path.exists(CFG_PATH):
         with open(CFG_PATH, 'w') as configfile:
             configfile.write("")
@@ -498,6 +513,11 @@ def initialize():
         settings.setValue("CUSSEC/cb_eqishi", False)
         settings.setValue("CUSSEC/cb_baigu", False)
         settings.setValue("CUSSEC/cb_jidian", False)
+
+    if not os.path.exists(SDPARAMETER_PATH):
+        with jsonlines.open(SDPARAMETER_PATH, mode='w') as writer:
+            writer.write(self_defined_parameter)
+
 
 def save_cfg():
     """ 保存配置文件 """
@@ -545,6 +565,7 @@ def save_cfg():
 
 def read_cfg():
     """读取配置文件"""
+    global self_defined_parameter
     # 随版本更改
     dbd_window.main_ui.rb_survivor.setChecked(json.loads(settings.value("CPCI/rb_survivor")))
     dbd_window.main_ui.cb_survivor_do.setChecked(json.loads(settings.value("CPCI/cb_survivor_do")))
@@ -599,6 +620,10 @@ def read_cfg():
         dbd_window.main_ui.pb_research.setDisabled(True)
         dbd_window.main_ui.pb_select_cfg.setDisabled(True)
 
+    with jsonlines.open(SDPARAMETER_PATH, mode='r') as reader:
+        for temporary_dict in reader:
+            self_defined_parameter.update(temporary_dict)
+
 
 
 
@@ -627,7 +652,7 @@ def authorization():
 
 def update():
     '''check the update'''
-    ver_now = 'V5.0.9'
+    ver_now = 'V5.1.0'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -707,11 +732,12 @@ def listen_key(pid):
 def blood_and_ceasma():
     '''check the blood and ceasma in the hall
     :return: bool'''
-    Blood_and_CeasmaXY = Coord(1105, 0, 1715, 144) #1091, 53, 1628, 93
+    global self_defined_parameter
+    Blood_and_CeasmaXY = Coord(1105, 0, 1715, 144)  # 1091, 53, 1628, 93
     Blood_and_CeasmaXY.processed_coord()
     Blood_and_CeasmaXY.area_check()
-    ret1, ret2 = Blood_and_CeasmaXY.find_color("C20408-000000", 0.94)
-    ret3, ret4 = Blood_and_CeasmaXY.find_color("8378B2-000000", 0.94) # 3A1752
+    ret1, ret2 = Blood_and_CeasmaXY.find_color(self_defined_parameter['blood_color'], self_defined_parameter['blood_value'])
+    ret3, ret4 = Blood_and_CeasmaXY.find_color(self_defined_parameter['ceasma_color'], self_defined_parameter['ceasma_value'])  # 3A1752
     if gt(ret1, 0) and gt(ret2, 0) and gt(ret3, 0) and gt(ret4, 0):
         return True
     else:
@@ -721,10 +747,11 @@ def blood_and_ceasma():
 def setting_button():
     '''check the setting button
     :return: bool'''
+    global self_defined_parameter
     setting_buttonXY = Coord(292, 978, 341, 1032)
     setting_buttonXY.processed_coord()
     setting_buttonXY.area_check()
-    ret1, ret2 = setting_buttonXY.find_color("7F7F7F-000000")
+    ret1, ret2 = setting_buttonXY.find_color(self_defined_parameter['setting_button_color'], self_defined_parameter['setting_button_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -733,10 +760,11 @@ def setting_button():
 def set_race():
     '''after race check setting button
     :return: bool'''
+    global self_defined_parameter
     set_raceXY = Coord(91, 985, 133, 1026)
     set_raceXY.processed_coord()
     set_raceXY.area_check()
-    ret1, ret2 = set_raceXY.find_color("7F7F7F-000000")
+    ret1, ret2 = set_raceXY.find_color(self_defined_parameter['set_race_color'], self_defined_parameter['set_race_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -745,10 +773,11 @@ def set_race():
 
 def ready_red():
     '''check after clicking the 'start' button '''
+    global self_defined_parameter
     ready_redXY = Coord(1794, 983, 1850, 1037)
     ready_redXY.processed_coord()
     ready_redXY.area_check()
-    ret1, ret2 = ready_redXY.find_color("EE0101-000000")
+    ret1, ret2 = ready_redXY.find_color(self_defined_parameter['ready_color'], self_defined_parameter['ready_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -759,10 +788,11 @@ def ready_red():
 def segment_reset():
     '''check Segment Reset
     :return: bool'''
+    global self_defined_parameter
     segmentXY = Coord(369, 221, 416, 277)
     segmentXY.processed_coord()
     segmentXY.area_check()
-    ret1, ret2 = segmentXY.find_color("F4F4F4-000000")
+    ret1, ret2 = segmentXY.find_color(self_defined_parameter['segment_reset_color'], self_defined_parameter['segment_reset_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -772,10 +802,11 @@ def segment_reset():
 def rites():
     '''check rites complete
     :return:bool'''
+    global self_defined_parameter
     ritesXY = Coord(239, 615, 335, 651)
     ritesXY.processed_coord()
     ritesXY.area_check()
-    ret1,ret2 = ritesXY.find_color("214826-000000")
+    ret1,ret2 = ritesXY.find_color(self_defined_parameter['rites_color'], self_defined_parameter['rites_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -794,10 +825,11 @@ def daily_ritual_main():
     '''check the daily task after serious disconnect -->[main]
     :return: bool
     '''
+    global self_defined_parameter
     daily_ritual_mainXY = Coord(470, 284, 507, 302)
     daily_ritual_mainXY.processed_coord()
     daily_ritual_mainXY.area_check()
-    ret1, ret2 = daily_ritual_mainXY.find_color("FFFFFF-000000")
+    ret1, ret2 = daily_ritual_mainXY.find_color(self_defined_parameter['daily_ritual_main_color'], self_defined_parameter['daily_ritual_main_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -809,10 +841,11 @@ def exit_button_main():
     check the game whether return the main menu. -->[quit button]
     :return: bool
     """
+    global self_defined_parameter
     exit_button_mainXY = Coord(504, 935, 569, 997)
     exit_button_mainXY.processed_coord()
     exit_button_mainXY.area_check()
-    ret1, ret2 = exit_button_mainXY.find_color("7F7C78-000000")
+    ret1, ret2 = exit_button_mainXY.find_color(self_defined_parameter['exit_button_main_color'], self_defined_parameter['exit_button_main_value'])
     if gt(ret1, 0) and gt(ret2, 0):
         return True
     else:
@@ -822,7 +855,8 @@ def exit_button_main():
 def disconnect_check():
     """After disconnect check the connection status
     :return: bool"""
-    ret = lw.FindColorBlockEx(822,361,1113,436,"730000-000000|6F0000-000000|700000-000000",0.95,300,70,70,1,1)
+    global self_defined_parameter
+    ret = lw.FindColorBlockEx(822,361,1113,436,self_defined_parameter['disconnect_check_color'],self_defined_parameter['disconnect_check_value'],300,70,70,1,1)
     if ne(ret, None):
         return True
     else:
@@ -831,7 +865,8 @@ def disconnect_check():
 def disconnect_confirm():
     '''After disconnection click confirm button. not need process.
     :return: int'''
-    lw.FindColor(319, 465, 1657, 946, "660000-000000", 0.95, 0)
+    global self_defined_parameter
+    lw.FindColor(319, 465, 1657, 946, self_defined_parameter['disconnect_confirm_color'], self_defined_parameter['disconnect_confirm_value'], 0)
     return lw.x(), lw.y()
 
 # def skill_check():
@@ -1354,7 +1389,10 @@ def AFK():
                     time.sleep(1)
                     if eq(settings.value("CPCI/rb_no_action"), True):
                         list_number = 0
-                    if ge(list_number, 1):
+                    if eq(list_number, 1):
+                        character_selection()
+                        list_number = 0
+                    elif gt(list_number, 1):
                         character_selection()
                 elif eq(settings.value("CPCI/rb_survivor"), True):
                     time.sleep(1)
@@ -1397,13 +1435,13 @@ def AFK():
         ready_room = False
         while ready_room == False:
             if eq(setting_button(), True):
-                time.sleep(5)
                 # 如果开启提醒，则开启进程
                 if eq(settings.value("CPCI/rb_survivor"), True) and eq(settings.value("CPCI/cb_survivor_do"), True):
                     tip.start()
                 while eq(ready_red(), False):
                     if eq(disconnect_check(), True):
                         break
+                    time.sleep(5)
                     moveclick(1, 1, 2, 2)
                     moveclick(1742, 931, 2, 0.5)
                     moveclick(20, 689)  # 商城上空白
@@ -1546,13 +1584,41 @@ if __name__ == '__main__':
     # DBDAS_PATH = os.path.join(BASE_DIR, "DBDAutoScript")
     CFG_PATH = os.path.join(BASE_DIR, "cfg.ini")
     SEARCH_PATH = os.path.join(BASE_DIR, "searchfile.txt")
+    SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("picture/dbdwindow.png"))
     dbd_window = DbdWindow()
     settings = qc.QSettings(CFG_PATH, qc.QSettings.IniFormat)
-    custom_select = CustomSelectKiller()
+    self_defined_parameter = {'blood_color': 'C20408-000000',
+                              'blood_value': 0.94,
+                               'ceasma_color': '8378B2-000000',
+                              'ceasma_value': 0.94,
+                               'setting_button_color': '7F7F7F-000000',
+                              'setting_button_value': 0.95,
+                               'set_race_color': '7F7F7F-000000',
+                              'set_race_value': 0.95,
+                               'ready_color': 'EE0101-000000',
+                              'ready_value': 0.95,
+                               'segment_reset_color': 'F4F4F4-000000',
+                              'segment_reset_value': 0.95,
+                               'rites_color': '214826-000000',
+                              'rites_value': 0.95,
+                               'daily_ritual_main_color': 'FFFFFF-000000',
+                              'daily_ritual_main_value': 1.0,
+                               'exit_button_main_color': '7F7C78-000000',
+                              'exit_button_main_value': 0.95,
+                               'disconnect_check_color': '730000-000000|6F0000-000000|700000-000000',
+                              'disconnect_check_value': 0.95,
+                               'disconnect_confirm_color': '660000-000000',
+                              'disconnect_confirm_value': 0.95,
+                              'killer_number': 32,
+                              'all_killer_name': ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
+                                "食人魔", "梦魇", "门徒", "小丑", "怨灵", "军团", "瘟疫", "鬼面", "魔王", "鬼武士",
+                                "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS", "地狱修士", "艺术家",
+                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"]}   # 判断的颜色值。相似度
     initialize()
     read_cfg()
+    custom_select = CustomSelectKiller()
     qss_style = '''
             QPushButton:hover {
                 background-color: #EEF1F2;
@@ -1608,6 +1674,7 @@ if __name__ == '__main__':
     circle = 0  # 选择的次数
     frequency = 0  # 换行的次数
     judge = 0
+    killer_number = self_defined_parameter['killer_number']
     # lw.SetUserTimeLimit("[2023年2月10日0时0分]")
     main_pid = os.getpid()
     afk_pid = 0

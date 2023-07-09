@@ -222,6 +222,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="pb_research">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>60</x>
@@ -230,8 +233,13 @@
         <height>23</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <strikeout>true</strikeout>
+       </font>
+      </property>
       <property name="text">
-       <string>检 索</string>
+       <string>  检 索  </string>
       </property>
      </widget>
      <widget class="QPushButton" name="pb_select_cfg">
@@ -321,6 +329,38 @@
        <string>屠夫赛后自动留言</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="pb_advanced">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>20</y>
+        <width>61</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <italic>false</italic>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>高级...</string>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+     </widget>
     </widget>
     <widget class="QFrame" name="frame_6">
      <property name="geometry">
@@ -341,9 +381,9 @@
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>50</y>
+        <y>40</y>
         <width>71</width>
-        <height>23</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="text">
@@ -353,10 +393,10 @@
      <widget class="QPushButton" name="pb_stop">
       <property name="geometry">
        <rect>
-        <x>210</x>
-        <y>50</y>
+        <x>220</x>
+        <y>40</y>
         <width>71</width>
-        <height>23</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="text">
@@ -403,7 +443,7 @@ QPushButton:hover {
        <string notr="true">color: rgb(130, 60, 200);</string>
       </property>
       <property name="text">
-       <string>ver 5.0.9</string>
+       <string>ver 5.1.0</string>
       </property>
      </widget>
      <widget class="QLabel" name="lb_message">
