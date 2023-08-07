@@ -1,13 +1,11 @@
 import os.path
 import random
-import sys
 import time
 import threading
 import webbrowser
 import pyautogui as py
 import requests, re
 import win32gui
-import win32api
 import jsonlines
 from keyboard_operation import key_down, key_up
 from operator import lt, eq, gt, ge, ne, floordiv, mod
@@ -30,6 +28,10 @@ def begin():
     # begin = multiprocessing.Process(target=AFK)
     # begin.daemon = True
     begingame.start()
+    autospace.start()
+    # 如果开启提醒，则开启线程
+    if eq(settings.value("CPCI/rb_survivor"), True) and eq(settings.value("CPCI/cb_survivor_do"), True):
+        tip.start()
 
 
 
@@ -90,12 +92,12 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         # self.main_ui.cb_rotate_solo.clicked.connect(self.cb_rotate_solo_click)
         # self.main_ui.cb_rotate_order.clicked.connect(self.cb_rotate_order_click)
         # self.main_ui.cb_select_killer.clicked.connect(self.cb_select_killer_click)
-        self.main_ui.pb_research.clicked.connect(self.pb_research_click)
+        # self.main_ui.pb_research.clicked.connect(self.pb_research_click)
         self.main_ui.pb_start.clicked.connect(begin)
         self.main_ui.pb_stop.clicked.connect(kill)
         self.main_ui.pb_github.clicked.connect(self.github)
 
-    def pb_research_click(self):
+    def pb_research_click(self): #-->> 废弃
         global killer_number
         lw.SetDict(0, "DbdKillerNames.txt")  # 设置字库
         win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
@@ -215,7 +217,7 @@ class AdvancedWindow(QDialog, Ui_AdvancedWindow):
         self.advanced_ui.setupUi(self)
 
 
-class CustomSelectKiller:
+class CustomSelectKiller:   #-->> 废弃
     global self_defined_parameter
     def __init__(self):
         self.ocr_error = 0
@@ -479,7 +481,7 @@ def initialize():
         settings.setValue("CPCI/cb_killer_do", False)
         settings.setValue("CPCI/rb_fixed_mode", False)
         settings.setValue("CPCI/rb_random_mode", False)
-        settings.setValue("CPCI/rb_no_action", False)
+        # settings.setValue("CPCI/rb_no_action", False)
         settings.setValue("UPDATE/cb_autocheck", True)
         settings.setValue("CUSSEC/cb_jiage", False)
         settings.setValue("CUSSEC/cb_dingdang", False)
@@ -528,7 +530,7 @@ def save_cfg():
     settings.setValue("CPCI/cb_killer_do", dbd_window.main_ui.cb_killer_do.isChecked())
     settings.setValue("CPCI/rb_fixed_mode", dbd_window.main_ui.rb_fixed_mode.isChecked())
     settings.setValue("CPCI/rb_random_mode", dbd_window.main_ui.rb_random_mode.isChecked())
-    settings.setValue("CPCI/rb_no_action", dbd_window.main_ui.rb_no_action.isChecked())
+    # settings.setValue("CPCI/rb_no_action", dbd_window.main_ui.rb_no_action.isChecked())
     settings.setValue("UPDATE/cb_autocheck", dbd_window.main_ui.cb_autocheck.isChecked())
     settings.setValue("CUSSEC/cb_jiage", dbd_window.sel_dialog.select_ui.cb_jiage.isChecked())
     settings.setValue("CUSSEC/cb_dingdang", dbd_window.sel_dialog.select_ui.cb_dingdang.isChecked())
@@ -573,7 +575,7 @@ def read_cfg():
     dbd_window.main_ui.cb_killer_do.setChecked(json.loads(settings.value("CPCI/cb_killer_do")))
     dbd_window.main_ui.rb_fixed_mode.setChecked(json.loads(settings.value("CPCI/rb_fixed_mode")))
     dbd_window.main_ui.rb_random_mode.setChecked(json.loads(settings.value("CPCI/rb_random_mode")))
-    dbd_window.main_ui.rb_no_action.setChecked(json.loads(settings.value("CPCI/rb_no_action")))
+    # dbd_window.main_ui.rb_no_action.setChecked(json.loads(settings.value("CPCI/rb_no_action")))
     dbd_window.main_ui.cb_autocheck.setChecked(json.loads(settings.value("UPDATE/cb_autocheck")))
     dbd_window.sel_dialog.select_ui.cb_jiage.setChecked(json.loads(settings.value("CUSSEC/cb_jiage")))
     dbd_window.sel_dialog.select_ui.cb_dingdang.setChecked(json.loads(settings.value("CUSSEC/cb_dingdang")))
@@ -611,14 +613,14 @@ def read_cfg():
         dbd_window.main_ui.cb_survivor_do.setEnabled(True)
         dbd_window.main_ui.rb_fixed_mode.setDisabled(True)
         dbd_window.main_ui.rb_random_mode.setDisabled(True)
-        dbd_window.main_ui.rb_no_action.setDisabled(True)
-        dbd_window.main_ui.pb_research.setDisabled(True)
+        # dbd_window.main_ui.rb_no_action.setDisabled(True)
+        # dbd_window.main_ui.pb_research.setDisabled(True)
         dbd_window.main_ui.pb_select_cfg.setDisabled(True)
     if settings.value("CPCI/rb_killer") == "true":
         dbd_window.main_ui.cb_killer_do.setEnabled(True)
-    if settings.value("CPCI/rb_no_action") == "true":
-        dbd_window.main_ui.pb_research.setDisabled(True)
-        dbd_window.main_ui.pb_select_cfg.setDisabled(True)
+    # if settings.value("CPCI/rb_no_action") == "true":
+    #     dbd_window.main_ui.pb_research.setDisabled(True)
+    #     dbd_window.main_ui.pb_select_cfg.setDisabled(True)
 
     with jsonlines.open(SDPARAMETER_PATH, mode='r') as reader:
         for temporary_dict in reader:
@@ -641,7 +643,7 @@ def read_cfg():
 #         return False
 
 def authorization():
-    '''check the authorization'''
+    """check the authorization"""
     authorization_now = '~x&amp;mBGbIneqSS('
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     authorization_new = re.search('title>(.*?)<', html_str, re.S).group(1)[21:]
@@ -651,8 +653,8 @@ def authorization():
         sys.exit(0)
 
 def update():
-    '''check the update'''
-    ver_now = 'V5.1.0'
+    """check the update"""
+    ver_now = 'V5.1.1'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -665,33 +667,31 @@ def update():
 
 
 def hall_tip():
-    '''Child thread, survivor hall tip'''
-    tip = False
-    while eq(tip, False):
-        py.press('enter')
-        py.press('delete', 3)
-        py.write('AFK')
-        py.press('enter')
-        if eq(blood_and_ceasma(), False):
-            tip = True
-        else:
+    """Child thread, survivor hall tip"""
+    while True:
+        if eq(blood_and_ceasma(), True) and eq(setting_button(), True):
+            py.press('enter')
+            py.press('delete', 3)
+            py.write('AFK')
+            py.press('enter')
             time.sleep(30)
-
-
+        else:
+            time.sleep(1)
 def auto_space():
-    '''Child thread, auto press space'''
-    global autospace_judge
-    global hwnd
-    autospace_thread = True
-    while eq(autospace_thread, True):
-        if eq(autospace_judge, True):
-            key_down(hwnd, 'space')
-            time.sleep(0.5)
-            key_up(hwnd, 'space')
+    """Child thread, auto press space"""
+    hwnd1 = win32gui.FindWindow(None, u"DeadByDaylight  ")
+    while True:
+        key_down(hwnd1, 'space')
+        time.sleep(2)
+        key_up(hwnd1, 'space')
+        py.press('backspace', 20)
+        time.sleep(3)
+
+
 
 
 def listen_key(pid):
-    '''Hotkey  setting, monitored keyboard input'''
+    """Hotkey  setting, monitored keyboard input"""
 
     cmb1 = [{keyboard.Key.alt_l, keyboard.Key.end}, {keyboard.Key.alt_r, keyboard.Key.end}]
     cmb2 = [{keyboard.Key.alt_l, keyboard.KeyCode.from_char('p')}, {keyboard.Key.alt_r, keyboard.KeyCode.from_char('p')}]
@@ -730,9 +730,8 @@ def listen_key(pid):
 
 
 def blood_and_ceasma():
-    '''check the blood and ceasma in the hall
-    :return: bool'''
-    global self_defined_parameter
+    """check the blood and ceasma in the hall
+    :return: bool"""
     Blood_and_CeasmaXY = Coord(1105, 0, 1715, 144)  # 1091, 53, 1628, 93
     Blood_and_CeasmaXY.processed_coord()
     Blood_and_CeasmaXY.area_check()
@@ -743,11 +742,39 @@ def blood_and_ceasma():
     else:
         return False
 
+def stage_judge():
+    """判断游戏所处在的阶段"""
+    global match_stage, ready_stage, end_stage
+    match_stageXY = Coord(1672, 919, 1707, 952)
+    match_stageXY.processed_coord()
+    match_stageXY.area_check()
+    match_stage = lw.FindMultiColor(match_stageXY.x1_coor, match_stageXY.y1_coor, match_stageXY.x2_coor, match_stageXY.y2_coor,
+                                    self_defined_parameter['match_stage_first_color'],self_defined_parameter['match_stage_offset_color'],
+                                   0.8, 0, 600)
+    if match_stage == 1:
+        match_stage = "匹配大厅"
+
+    ready_stageXY = Coord(1670, 916, 1708, 953)
+    ready_stageXY.processed_coord()
+    ready_stageXY.area_check()
+    ready_stage = lw.FindMultiColor(ready_stageXY.x1_coor, ready_stageXY.y1_coor, ready_stageXY.x2_coor, ready_stageXY.y2_coor,
+                                    self_defined_parameter['ready_stage_first_color'], self_defined_parameter['ready_stage_offset_color'],
+                                    0.8, 0, 600)
+    if ready_stage == 1:
+        ready_stage = "准备房间"
+
+    end_stageXY = Coord(1753, 993, 1784, 1022)
+    end_stageXY.processed_coord()
+    end_stageXY.area_check()
+    end_stage = lw.FindMultiColor(end_stageXY.x1_coor, end_stageXY.y1_coor, end_stageXY.x2_coor, end_stageXY.y2_coor,
+                                  self_defined_parameter['end_stage_first_color'],self_defined_parameter['end_stage_offset_color'],
+                                  0.8, 0, 600)
+    if end_stage == 1:
+        end_stage = "游戏结束"
 
 def setting_button():
-    '''check the setting button
-    :return: bool'''
-    global self_defined_parameter
+    """check the setting button
+    :return: bool"""
     setting_buttonXY = Coord(292, 978, 341, 1032)
     setting_buttonXY.processed_coord()
     setting_buttonXY.area_check()
@@ -758,9 +785,8 @@ def setting_button():
         return False
 
 def set_race():
-    '''after race check setting button
-    :return: bool'''
-    global self_defined_parameter
+    """after race check setting button
+    :return: bool"""
     set_raceXY = Coord(91, 985, 133, 1026)
     set_raceXY.processed_coord()
     set_raceXY.area_check()
@@ -772,8 +798,7 @@ def set_race():
 
 
 def ready_red():
-    '''check after clicking the 'start' button '''
-    global self_defined_parameter
+    """check after clicking the 'start' button """
     ready_redXY = Coord(1794, 983, 1850, 1037)
     ready_redXY.processed_coord()
     ready_redXY.area_check()
@@ -786,9 +811,8 @@ def ready_red():
 
 
 def segment_reset():
-    '''check Segment Reset
-    :return: bool'''
-    global self_defined_parameter
+    """check Segment Reset
+    :return: bool"""
     segmentXY = Coord(369, 221, 416, 277)
     segmentXY.processed_coord()
     segmentXY.area_check()
@@ -800,9 +824,8 @@ def segment_reset():
 
 
 def rites():
-    '''check rites complete
-    :return:bool'''
-    global self_defined_parameter
+    """check rites complete
+    :return:bool"""
     ritesXY = Coord(239, 615, 335, 651)
     ritesXY.processed_coord()
     ritesXY.area_check()
@@ -812,20 +835,20 @@ def rites():
     else:
         return False
 
-# 检测活动奖励  #####
+# 检测活动奖励  #####未完成
+
 def event_rewards():
-    '''check the event rewards
-    :return: bool'''
+    """check the event rewards
+    :return: bool"""
     eventXY = Coord(1864, 455, 1920, 491)
     eventXY.processed_coord()
     eventXY.area_check()
 
 
 def daily_ritual_main():
-    '''check the daily task after serious disconnect -->[main]
+    """check the daily task after serious disconnect -->[main]
     :return: bool
-    '''
-    global self_defined_parameter
+    """
     daily_ritual_mainXY = Coord(470, 284, 507, 302)
     daily_ritual_mainXY.processed_coord()
     daily_ritual_mainXY.area_check()
@@ -841,7 +864,6 @@ def exit_button_main():
     check the game whether return the main menu. -->[quit button]
     :return: bool
     """
-    global self_defined_parameter
     exit_button_mainXY = Coord(504, 935, 569, 997)
     exit_button_mainXY.processed_coord()
     exit_button_mainXY.area_check()
@@ -855,18 +877,35 @@ def exit_button_main():
 def disconnect_check():
     """After disconnect check the connection status
     :return: bool"""
-    global self_defined_parameter
-    ret = lw.FindColorBlockEx(822,361,1113,436,self_defined_parameter['disconnect_check_color'],self_defined_parameter['disconnect_check_value'],300,70,70,1,1)
-    if ne(ret, None):
+    global disconnect_check_area
+    disconnect_check_colorXY = Coord(1043, 350, 1113, 391)
+    disconnect_check_colorXY.processed_coord()
+    disconnect_check_colorXY.area_check()
+    ret1 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
+                               disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_red'],
+                              self_defined_parameter['disconnect_check_value'], 300, 70, 70, 1, 1)  # 822,361,1113,436
+    if eq(blood_and_ceasma(), False):
+        ret2 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
+                                   disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_blue'],
+                                   self_defined_parameter['disconnect_check_value'], 300, 20, 20, 1 , 1)
+        if ne(ret2, None):
+            disconnect_check_area = 1
+            return True
+    if ne(ret1, None):
         return True
     else:
         return False
 
+
 def disconnect_confirm():
-    '''After disconnection click confirm button. not need process.
-    :return: int'''
-    global self_defined_parameter
-    lw.FindColor(319, 465, 1657, 946, self_defined_parameter['disconnect_confirm_color'], self_defined_parameter['disconnect_confirm_value'], 0)
+    """After disconnection click confirm button. not need process.
+    :return: int"""
+    global disconnect_check_area
+    disconnect_check_X = 319
+    if disconnect_check_area == 1:
+        disconnect_check_X = 1000
+    lw.FindColor(disconnect_check_X, 465, 1657, 946, self_defined_parameter['disconnect_confirm_color'],
+                 self_defined_parameter['disconnect_confirm_value'], 0)
     return lw.x(), lw.y()
 
 # def skill_check():
@@ -986,7 +1025,7 @@ def random_movement():
 
 
 def random_direction():
-    """随机方向
+    """随机旋转方向
     :return: str
     """
     rn = random.randint(1, 2)
@@ -997,21 +1036,45 @@ def random_direction():
 
 
 def random_movetime():
-    '''get the character random move time in the game
-    :return: float'''
-    rn = round(random.uniform(0.9, 1.5), 3)
+    """get the character random move time in the game
+    :return: float"""
+    rn = round(random.uniform(1.1, 2.0), 3) # 0.5 1.5
     return rn
 
 
 def random_veertime():
-    '''get the character random veer time
-    :return: float'''
-    rn = round(random.uniform(0.275, 0.6), 3)
+    """get the character random veer time
+    :return: float"""
+    rn = round(random.uniform(0.275, 0.4), 3)  # 0.6
     return rn
 
+def random_move(move_time):
+    """行走动作"""
+    act_move = random_movement()
+    key_down(hwnd, act_move)
+    time.sleep(move_time)
+    key_up(hwnd, act_move)
+
+def random_veer(veer_time):
+    """旋转动作"""
+    act_direction = random_direction()
+    key_down(hwnd, act_direction)
+    time.sleep(veer_time)
+    key_up(hwnd, act_direction)
+
+# def random_veer_move():
+#     act_move = random_movement()
+#     key_down(hwnd, act_move)
+#     time.sleep(random_movetime())
+#     act_direction = random_direction()
+#     key_down(hwnd, act_direction)
+#     time.sleep(random_veertime())
+#     key_up(hwnd, act_direction)
+#     key_up(hwnd, act_move)
+
 def hurt():
-    '''check survivor whether hurt
-    ":return: bool'''
+    """check survivor whether hurt
+    ":return: bool"""
     hurtXY = Coord(102, 450, 159, 499)
     hurtXY.processed_coord()
     hurtXY.area_check()
@@ -1022,8 +1085,8 @@ def hurt():
         return False
 
 def on_hook():
-    '''check survivor whether on the hook
-    :return: bool'''
+    """check survivor whether on the hook
+    :return: bool"""
     hookXY = Coord(189, 492, 325, 508)
     hookXY.processed_coord()
     hookXY.area_check()
@@ -1033,9 +1096,8 @@ def on_hook():
     else:
         return False
 
-
 def survivor_action():
-    '''survivor`s action'''
+    """survivor`s action"""
     if eq(on_hook(), True):
         time.sleep(2)
         for i in range(2):
@@ -1065,148 +1127,271 @@ def survivor_action():
     time.sleep(3)
     key_up(hwnd, 'lcontrol')
 
-
-def killer_action():
-    '''main fracture'''
-    # 抬头
-    key_down(hwnd, 'up')
-    time.sleep(2)
-    key_up(hwnd, 'up')
-    # 主体动作
-    for i in range(2):
-        act_move = random_movement()
-        key_down(hwnd, act_move)
-        time.sleep(random_movetime())
-        act_direction = random_direction()
-        key_down(hwnd, act_direction)
-        time.sleep(random_veertime())
-        key_up(hwnd, act_direction)
-        key_up(hwnd, act_move)
-    act_move = random_movement()
-    key_down(hwnd, act_move)
-    act_direction = random_direction()
-    key_down(hwnd, act_direction)
-    time.sleep(0.2)
-    # 低头使用技能
-    key_down(hwnd, 'down')
-    time.sleep(0.4)
-    key_up(hwnd, 'down')
-    # 力量
+# def killer_action_skill():
+#     """killer`s skill action"""
+#     random_number = random.sample(range(1, 6), 5)
+#     act_direction = random_direction()
+#     act_direction_judge = False
+#     rn = random.randint(1, 1000)
+#     if 1 <= rn <= 25:
+#         act_move = random_movement()
+#         key_down(hwnd, act_move)
+#         key_down(hwnd, act_direction)
+#         act_direction_judge = True
+#     else:
+#         act_move = random_movement()
+#         key_down(hwnd, act_move)
+#     time.sleep(0.2)
+#     # 力量
+#     ctrl_lst = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人"]
+#     if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+#         if eq(random_number[0], 1) or eq(random_number[0], 2) or eq(random_number[0], 3):
+#         # rn = random.randint(1, 200)
+#         # if 100 < rn <= 175:
+#             key_down(hwnd, 'lcontrol')
+#             time.sleep(4.3)
+#             key_up(hwnd, 'lcontrol')
+#     if act_direction_judge:
+#         key_up(hwnd, act_direction)
+#     key_up(hwnd, act_move)
+#     # 技能[右键左键]
+#     need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者"]
+#     if custom_select.select_killer_lst[character_num_b - 1] in need_lst:
+#         if eq(random_number[1], 2) or eq(random_number[1], 1) or eq(random_number[1], 3):
+#         # rn = random.randint(1, 1000)
+#         # if 1 <= rn <= 25:
+#             act_move = random_movement()
+#             key_down(hwnd, act_move)
+#             veertime = round(random.uniform(0.3, 0.6), 3)
+#             random_veer(veertime)
+#         elif eq(random_number[2], 3):
+#             act_move = random_movement()
+#             key_down(hwnd, act_move)
+#             random_veer(random_veertime())
+#         if eq(random_number[3], 4) or eq(random_number[3], 3) or eq(random_number[3], 2):
+#             py.mouseDown(button='right')
+#             rn = random.randint(1, 10)
+#             if rn >= 7:
+#                 random_veer(random_veertime())
+#             time.sleep(3.5)
+#             py.mouseDown()
+#             py.mouseUp()
+#             py.mouseUp(button='right')
+#             time.sleep(2.0)
+#         random_veer(random_veertime())
+#         rn = random.randint(1, 1000)
+#         if 1 <= rn <= 850:
+#             key_down(hwnd, 'lcontrol')
+#             key_up(hwnd, 'lcontrol')
+#             key_down(hwnd, 'lcontrol')
+#             key_up(hwnd, 'lcontrol')
+#         key_up(hwnd, act_move)
+#     elif eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者"):
+#         for i in range(5):
+#             act_move = random_movement()
+#             key_down(hwnd, act_move)
+#             act_direction = random_direction()
+#             py.mouseDown(button='right')
+#             py.mouseUp(button='right')
+#             time.sleep(0.7)
+#             key_down(hwnd, act_direction)
+#             time.sleep(0.3)
+#             key_up(hwnd, act_direction)
+#             key_up(hwnd, act_move)
+#     else:
+#         # 技能[右键]
+#         for i in range(1):
+#             move_time = round(random.uniform(1.5, 5.0), 3)
+#             random_move(move_time)
+#             veertime = round(random.uniform(0.285, 0.6), 3)
+#             random_veer(veertime)
+#         act_move_1 = random_movement()
+#         act_move_2 = random_movement()
+#         key_down(hwnd, act_move_1)
+#         key_down(hwnd, act_move_2)
+#         time.sleep(1.5)
+#         py.mouseDown(button='right')
+#         time.sleep(1)
+#         key_down(hwnd, 'lcontrol')
+#         key_up(hwnd, 'lcontrol')
+#         py.mouseUp(button='right')
+#         key_up(hwnd, act_move_1)
+#         key_up(hwnd, act_move_2)
+#         random_move(3)
+def killer_ctrl():
     key_down(hwnd, 'lcontrol')
     time.sleep(4.3)
     key_up(hwnd, 'lcontrol')
-    key_up(hwnd, act_direction)
-    key_up(hwnd, act_move)
-    # 技能[右键左键]
-    need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点"]
-    if custom_select.select_killer_lst[character_num_b-1] in need_lst:
-        act_move = random_movement()
-        key_down(hwnd, act_move)
-        act_direction = random_direction()
-        key_down(hwnd, act_direction)
-        py.mouseDown(button='right')
-        time.sleep(3.5)
-        py.mouseDown()
-        py.mouseUp()
-        py.mouseUp(button='right')
-        time.sleep(2.5)
-        key_down(hwnd, 'lcontrol')
-        key_up(hwnd, 'lcontrol')
-        key_down(hwnd, 'lcontrol')
-        key_up(hwnd, 'lcontrol')
-        key_up(hwnd, act_direction)
-        key_up(hwnd, act_move)
-    elif eq(custom_select.select_killer_lst[character_num_b-1], "枯萎者"):
-        for i in range(3):
-            py.mouseDown(button='right')
-            py.mouseUp(button='right')
-            time.sleep(0.7)
-            key_down(hwnd, 'q')
-            time.sleep(0.3)
-            key_up(hwnd, 'q')
-        for i in range(2):
-            py.mouseDown(button='right')
-            py.mouseUp(button='right')
-            time.sleep(0.7)
-            key_down(hwnd, 'e')
-            time.sleep(0.3)
-            key_up(hwnd, 'e')
-        py.mouseDown()
-        py.mouseUp()
-    elif eq(custom_select.select_killer_lst[character_num_b-1], "恶骑士"):
-        py.mouseDown(button='right')
-        py.mouseUp(button='right')
-        time.sleep(0.3)
-        for i in range(2):
-            key_down(hwnd, 'w')
-            time.sleep(1)
+
+def killer_skillclick():
+    py.mouseDown(button='right')
+    time.sleep(3)
+    py.mouseDown()
+    py.mouseUp()
+    py.mouseUp(button='right')
+    time.sleep(2)
+    key_down(hwnd, 'lcontrol')
+    key_up(hwnd, 'lcontrol')
+
+def killer_skill():
+    py.mouseDown(button='right')
+    time.sleep(3)
+    key_down(hwnd, 'lcontrol')
+    key_up(hwnd, 'lcontrol')
+    py.mouseUp(button='right')
+
+def killer_action():
+    """killer integral action"""
+    ctrl_lst = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人"]
+    need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者"]
+    if eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者"):
+        for i in range(5):
+            act_move = random_movement()
+            key_down(hwnd, act_move)
             act_direction = random_direction()
+            py.mouseDown(button='right')
+            py.mouseUp(button='right')
+            time.sleep(0.7)
             key_down(hwnd, act_direction)
-            time.sleep(0.35)
+            time.sleep(0.3)
             key_up(hwnd, act_direction)
+            key_up(hwnd, act_move)
+    elif custom_select.select_killer_lst[character_num_b - 1] in need_lst:
+        random_number = random.randint(1, 1000)
+        if gt(random_number, 400):
+            # 移动
+            key_down(hwnd, 'w')
+            # 点按
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                for i in range(3):
+                    move = random_movement()
+                    key_down(hwnd, move)
+                    time.sleep(0.5)
+                    key_up(hwnd, move)
+            # 技能
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 700):
+                killer_skillclick()
+                direction = random_direction()
+            # 转向
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                key_down(hwnd, direction)
+                time.sleep(random_veertime())
+                key_up(hwnd, direction)
+            # ctrl
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 700):
+                killer_ctrl()
+            time.sleep(5)
             key_up(hwnd, 'w')
-        py.mouseDown(button='right')
-        py.mouseUp(button='right')
+        elif lt(random_number, 400):
+            direction = random_direction()
+            # 转向
+            key_down(hwnd, direction)
+            time.sleep(random_veertime())
+            key_up(hwnd, direction)
+            # 移动
+            key_down(hwnd, 'w')
+            # 点按
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                for i in range(3):
+                    move = random_movement()
+                    key_down(hwnd, move)
+                    time.sleep(0.5)
+                    key_up(hwnd, move)
+            #ctrl
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 500):
+                killer_ctrl()
+            # 技能
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 700):
+                killer_skillclick()
+            time.sleep(5)
+            key_up(hwnd, 'w')
     else:
-        # 技能[右键]
-        act_move = random_movement()
-        key_down(hwnd, act_move)
-        act_direction = random_direction()
-        key_down(hwnd, act_direction)
-        py.mouseDown(button='right')
-        time.sleep(3.5)
-        key_down(hwnd, 'lcontrol')
-        key_up(hwnd, 'lcontrol')
-        py.mouseUp(button='right')
-        time.sleep(3)
-        key_up(hwnd, act_direction)
-        key_up(hwnd, act_move)
-    # 结束
-    time.sleep(1.5)
+        random_number = random.randint(1, 1000)
+        if gt(random_number, 400):
+            # 移动
+            key_down(hwnd, 'w')
+            # 点按
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                for i in range(3):
+                    move = random_movement()
+                    key_down(hwnd, move)
+                    time.sleep(0.5)
+                    key_up(hwnd, move)
+            # 技能
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 700):
+                killer_skill()
+            # 转向
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                direction = random_direction()
+                key_down(hwnd, direction)
+                time.sleep(random_veertime())
+                key_up(hwnd, direction)
+                if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+                    # ctrl
+                    killer_ctrl()
+            time.sleep(5)
+            key_up(hwnd, 'w')
+        elif lt(random_number, 400):
+            direction = random_direction()
+            # 转向
+            key_down(hwnd, direction)
+            time.sleep(random_veertime())
+            key_up(hwnd, direction)
+            # 移动
+            key_down(hwnd, 'w')
+            # 点按
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 600):
+                for i in range(3):
+                    move = random_movement()
+                    key_down(hwnd, move)
+                    time.sleep(0.5)
+                    key_up(hwnd, move)
+            # 技能
+            random_number = random.randint(1, 1000)
+            if gt(random_number, 700):
+                if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+                    # ctrl
+                    killer_ctrl()
+                killer_skill()
+            time.sleep(5)
+            key_up(hwnd, 'w')
+
+
 
 
 
 
 def killer_fixed_act():
-    '''main blood'''
-    for i in range(2):
-        py.mouseDown()
-        time.sleep(2)
-        py.mouseUp()
-        time.sleep(0.3)
-    # 力量
-    key_down(hwnd, 'lcontrol')
-    time.sleep(4)
-    key_up(hwnd, 'lcontrol')
-    time.sleep(0.3)
-    key_down(hwnd, 'e')
-    time.sleep(0.275)
-    key_up(hwnd, 'e')
-    # 技能[右键]
-    py.mouseDown(button='right')
-    time.sleep(3.5)
-    key_down(hwnd, 'lcontrol')
-    key_up(hwnd, 'lcontrol')
-    py.mouseUp(button='right')
-    time.sleep(1)
-    # 技能[右键左键]
-    py.mouseDown(button='right')
-    time.sleep(3.5)
+    """main blood"""
+    for i in range(4):
+        move_time = round(random.uniform(1.5, 5.0), 3)
+        random_move(move_time)
+        veertime = round(random.uniform(0.285, 0.6), 3)
+        random_veer(veertime)
+        rn = random.randint(1, 200)
+        if gt(rn, 175):
+            py.mouseDown()
+            time.sleep(2)
+            py.mouseUp()
+            time.sleep(0.3)
     py.mouseDown()
+    time.sleep(2)
     py.mouseUp()
-    py.mouseUp(button='right')
-    time.sleep(1.5)
-    key_down(hwnd, 'lcontrol')
-    key_up(hwnd, 'lcontrol')
-    key_down(hwnd, 'lcontrol')
-    key_up(hwnd, 'lcontrol')
-    key_down(hwnd, 'q')
-    time.sleep(0.275)
-    key_up(hwnd, 'q')
 
 
 def back_first():
-    '''click back the first character'''
+    """click back the first character"""
     wheelcoord = Coord(404, 536)
     wheelcoord.processed_coord()
     # 回到最开始,需要几次就回滚几次
@@ -1217,6 +1402,8 @@ def back_first():
     py.scroll(1)
     py.sleep(0.5)
     py.scroll(1)
+    moveclick(405, 314, 1.5)
+
 
 
 # def character_rotation():
@@ -1268,8 +1455,8 @@ def back_first():
 
 
 def character_selection():
-    '''自选特定的角色轮转【屠夫推荐】'''
-    global ghX, ghY, glX, glY, character_num, character_num_b, circle, frequency,judge
+    """自选特定的角色轮转【屠夫推荐】"""
+    global ghX, ghY, glX, glY, character_num, character_num_b, circle, frequency, judge
     if eq(judge, 0):
         custom_select.read_search_killer_name()
         custom_select.match_select_killer_name()
@@ -1284,9 +1471,10 @@ def character_selection():
     wheelcoord = Coord(404, 536)  # 第五个坐标，提前处理
     wheelcoord.processed_coord()
     back_first()
-    if lt(timey, 6):  ## 最大的换行次数+1
+    if lt(timey, 6):  # 最大的换行次数+1
         if eq(timex, 0):
             timey -= 1
+            timex = 4
         if gt(timey, 0):
             py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
             time.sleep(1.5)
@@ -1297,10 +1485,8 @@ def character_selection():
                 if eq(frequency, timey):
                     frequency = 0
                     break
-        if eq(timex, 0):
-            timex = 4
         moveclick(ghX[timex-1], ghY[timex-1], 1.5)
-    elif gt(timey, 5): ## 最大换行次数
+    elif gt(timey, 5):  # 最大换行次数
         py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
         time.sleep(1.5)
         while True:
@@ -1310,10 +1496,10 @@ def character_selection():
             if eq(frequency, timey):
                 frequency = 0
                 break
-        if eq(timey, 6) and eq(timex, 0):
+        if eq(timey, 6) and eq(timex, 0):  # 第一个判断最大换行次数加一
             moveclick(ghX[3], ghY[3], 1.5)
         else:
-            final_number = character_num[character_num_b] - 24 # (最大换行+1)*4
+            final_number = character_num[character_num_b] - 24  # (最大换行+1)*4
             # 最后两行的序数，减1为数组序数。再减1为下标
             if gt(final_number, 1):
                 final_number -= 2  # -->>
@@ -1328,20 +1514,15 @@ def character_selection():
 
 def AFK():
     # hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
-    global hwnd
-    global autospace_judge
+    global hwnd, match_stage, ready_stage, end_stage, self_defined_parameter
     custom_select.select_killer_name()
     list_number = len(custom_select.select_killer_lst)
-    # 判断游戏是否运行
-    if hwnd == 0:
-        win32api.MessageBox(hwnd, "未检测到游戏。", "错误", win32con.MB_OK | win32con.MB_ICONERROR)
-        sys.exit(0)
 
     if not settings.value("CPCI/rb_survivor") and not settings.value("CPCI/rb_killer"):
         win32api.MessageBox(hwnd, "请选择阵营。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
         sys.exit(0)
 
-    if not custom_select.select_killer_lst and eq(settings.value("CPCI/rb_killer"), True) and eq(settings.value("CPCI/rb_no_action"), False):
+    if not custom_select.select_killer_lst and eq(settings.value("CPCI/rb_killer"), True):
         win32api.MessageBox(hwnd, "至少选择一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
         sys.exit(0)
     # 检查输入数值是否超过最大角色数量
@@ -1356,11 +1537,6 @@ def AFK():
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-    # 创建子线程
-    tip = threading.Thread(target=hall_tip, daemon=True)
-    autospace = threading.Thread(target=auto_space, daemon=True)
-    # 启动子线程
-    autospace.start()
     while True:
         reconnection = False
         '''
@@ -1368,15 +1544,20 @@ def AFK():
 
         '''
         matching = False
-        while matching == False:
+        while not matching:
             # 判断条件是否成立
             if eq(blood_and_ceasma(), True):
+                # 判断游戏所处的阶段
+                if eq(self_defined_parameter['stage_judge_switch'], 1):
+                    stage_judge()
+                    if match_stage != "匹配大厅":
+                        break
 
-                '''
+                """
                 在这里判断选择的模式，并从前台提取数值。
-                挂机模式 值 = 轮换 则再判断为那种模式；如果值 = 固定 则等待time
+                挂机模式 值 = 轮换 则再判断为哪种模式；如果值 = 固定 则等待time
                 再判断插件是否为0，@@插件已废弃
-                '''
+                """
                 # if eq(settings.value("CPCI/cb_rotate_solo"), True) and eq(settings.value("CPCI/rb_rotate_mode"), True):
                 #     global input_num
                 #     input_num = 4
@@ -1385,10 +1566,11 @@ def AFK():
                 # elif eq(settings.value("CPCI/cb_rotate_order"), True) and eq(settings.value("CPCI/rb_rotate_mode"), True):
                 #     time.sleep(1)
                 #     character_rotation()
+                # 自动选择屠夫的模式
                 if eq(settings.value("CPCI/rb_killer"), True):
                     time.sleep(1)
-                    if eq(settings.value("CPCI/rb_no_action"), True):
-                        list_number = 0
+                    # if eq(settings.value("CPCI/rb_no_action"), True):
+                    #     list_number = 0
                     if eq(list_number, 1):
                         character_selection()
                         list_number = 0
@@ -1398,7 +1580,7 @@ def AFK():
                     time.sleep(1)
                     py.click()
                 # 进行准备
-                while eq(ready_red(), False):
+                while eq(ready_red(), False):  # debug:False -->test
                     moveclick(1, 1, 0.5, 1)
                     moveclick(1742, 931, 1, 0.5)  # 处理坐标，开始匹配
                     moveclick(20, 689, 1.5)  # 商城上空白
@@ -1417,8 +1599,11 @@ def AFK():
         '''
         准备加载
         '''
-        ready_load = False
-        while ready_load == False:
+        ready_load = False  # debug:False -->test
+        if eq(self_defined_parameter['stage_judge_switch'], 1):
+            if ne(match_stage, "匹配大厅"):
+                ready_load = True
+        while not ready_load:
             if eq(disconnect_check(), True):  # 断线检测
                 reconnection = reconnect()
                 ready_load = True  # 检测到断线，重连之后跳出循环，
@@ -1432,12 +1617,14 @@ def AFK():
         '''
         准备
         '''
-        ready_room = False
-        while ready_room == False:
+        ready_room = False  # debug:False -->True
+        while not ready_room:
             if eq(setting_button(), True):
-                # 如果开启提醒，则开启进程
-                if eq(settings.value("CPCI/rb_survivor"), True) and eq(settings.value("CPCI/cb_survivor_do"), True):
-                    tip.start()
+                # 判断游戏所处的阶段
+                if eq(self_defined_parameter['stage_judge_switch'], 1):
+                    stage_judge()
+                    if ready_stage != "准备房间":
+                        break
                 while eq(ready_red(), False):
                     if eq(disconnect_check(), True):
                         break
@@ -1458,14 +1645,16 @@ def AFK():
         '''
 
         game_load = False
-        while game_load == False:
+        if eq(self_defined_parameter['stage_judge_switch'], 1):
+            if ne(ready_stage, "准备房间"):
+                game_load = True
+        while not game_load:
             if eq(blood_and_ceasma(), False):
                 game_load = True
                 time.sleep(5)
             elif eq(disconnect_check(), True):
                 reconnection = reconnect()
                 game_load = True
-
         # 重连返回值判断
         if eq(reconnection, True):
             continue
@@ -1474,10 +1663,15 @@ def AFK():
         局内
         '''
         game = False
-        while game == False:
+        ingame_icon_1XY = Coord(174, 950, 201, 977)
+        ingame_icon_1XY.processed_coord()
+        ingame_icon_1XY.area_check()
+        ingame_icon_2XY = Coord(825, 914, 1145, 965)
+        ingame_icon_2XY.processed_coord()
+        ingame_icon_2XY.area_check()
+        while not game:
             if eq(blood_and_ceasma(), True):
-                autospace_judge = False
-                moveclick(0, 0, 0.5, 1)
+                moveclick(1, 1, 0.5, 1)
                 time.sleep(2)
                 # 段位重置
                 if eq(segment_reset(), True):
@@ -1487,12 +1681,23 @@ def AFK():
                     moveclick(396, 718, 0.5, 1)
                     moveclick(140, 880)
                 time.sleep(5)
+                # 判断所处的游戏阶段
+                if eq(self_defined_parameter['stage_judge_switch'], 1):
+                    stage_judge()
+                    if end_stage != "游戏结束":
+                        if match_stage == "匹配大厅" or ready_stage == "准备房间":
+                            break
+                        else:
+                            continue
                 # 判断是否开启
                 if eq(settings.value("CPCI/cb_killer_do"), True) and eq(settings.value("CPCI/rb_killer"), True):
                     auto_message()
                 moveclick(1761, 1009, 0.5, 1)  # return hall
                 py.click()
                 if eq(blood_and_ceasma(), False):
+                    game = True
+                elif eq(disconnect_check(), True):
+                    reconnection = reconnect()
                     game = True
             else:
                 # 从前台获取 阵营数据，再判断行为模式
@@ -1502,10 +1707,20 @@ def AFK():
                     killer_fixed_act()
                 elif eq(settings.value("CPCI/rb_random_mode"), True):
                     killer_action()
-                if eq(disconnect_check(), True):
-                    reconnection = reconnect()
-                    game = True
-                    autospace_judge = False
+                time.sleep(1)
+
+                ingame_icon_1 = ingame_icon_1XY.find_color(self_defined_parameter['ingame_icon_color'], 0.9, 500)
+                    # lw.FindColorBlockEx(ingame_icon_1XY.x1_coor, ingame_icon_1XY.y1_coor, ingame_icon_1XY.x2_coor,
+                    #                                 ingame_icon_1XY.y2_coor, self_defined_parameter['ingame_icon_color'],
+                    #                                 0.90, 10, 10, 10, 1, 0))
+                ingame_icon_2 = ingame_icon_2XY.find_color(self_defined_parameter['ingame_icon_color'], 0.9, 500)
+                    # lw.FindColorBlockEx(ingame_icon_2XY.x1_coor, ingame_icon_2XY.y1_coor, ingame_icon_2XY.x2_coor,
+                    #                               ingame_icon_2XY.y2_coor, self_defined_parameter['ingame_icon_color'],
+                    #                               0.90, 10, 10, 10, 1, 0))
+                if eq(ingame_icon_1, None) or eq(ingame_icon_2, None):
+                    if eq(disconnect_check(), True):
+                        reconnection = reconnect()
+                        game = True
 
         # 重连返回值判断
         if eq(reconnection, True):
@@ -1515,68 +1730,6 @@ def AFK():
 
     # begin.join()
     # hotkey.join()
-
-
-# if __name__ == '__main__':
-#
-#     def q1():
-#         for i in range(1, 1000):
-#             print(i)
-#             time.sleep(1)
-#
-#
-#     def q2():
-#         for i in range(1, 1000):
-#             print('i came')
-#             time.sleep(1)
-#
-#
-#     def listen(pid):
-#         cmb1 = [{keyboard.Key.shift_l, keyboard.Key.end}, {keyboard.Key.shift_r, keyboard.Key.end}]
-#         cmb2 = [{keyboard.Key.shift_l, keyboard.Key.home}, {keyboard.Key.shift_r, keyboard.Key.home}]
-#         cmb3 = [{keyboard.Key.shift_l, keyboard.Key.page_up}, {keyboard.Key.shift_r, keyboard.Key.page_up}]
-#         current = set()
-#
-#         def execute():
-#             psutil.Process(pid).kill()
-#
-#         def pause():
-#             psutil.Process(pid).suspend()
-#
-#         def resume():
-#             psutil.Process(pid).resume()
-#
-#         def on_press(key):
-#             if any([key in z for z in cmb1] or [key in z for z in cmb2] or [key in z for z in cmb3]):
-#                 current.add(key)
-#                 if any(all(k in current for k in z) for z in cmb1):
-#                     execute()
-#                 elif any(all(k in current for k in z) for z in cmb2):
-#                     pause()
-#                 elif any(all(k in current for k in z) for z in cmb3):
-#                     resume()
-#
-#         def on_release(key):
-#             if any([key in z for z in cmb1] or [key in z for z in cmb2] or [key in z for z in cmb3]):
-#                 current.remove(key)
-#
-#         with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-#             listener.join()
-#
-#     # p2 = Process(q1())
-#     # p2.start()
-#     # pid = p2.pid
-#     # p1 = Process(listen_key(pid))
-#     # p1.start()
-#     # tip = threading.Thread(target=listen, args=(os.getpid(),), daemon=True)
-#     # t1 = threading.Thread(target=q1,daemon=True)
-#     # tip.start()
-#     # t1.start()
-#     # while True:
-#     #     print(os.getpid())
-#     #     time.sleep(1)
-
-
 
 
 if __name__ == '__main__':
@@ -1589,6 +1742,7 @@ if __name__ == '__main__':
     app.setWindowIcon(QIcon("picture/dbdwindow.png"))
     dbd_window = DbdWindow()
     settings = qc.QSettings(CFG_PATH, qc.QSettings.IniFormat)
+    # 判断的颜色值。相似度，屠夫列表
     self_defined_parameter = {'blood_color': 'C20408-000000',
                               'blood_value': 0.94,
                                'ceasma_color': '8378B2-000000',
@@ -1607,15 +1761,24 @@ if __name__ == '__main__':
                               'daily_ritual_main_value': 1.0,
                                'exit_button_main_color': '7F7C78-000000',
                               'exit_button_main_value': 0.95,
-                               'disconnect_check_color': '730000-000000|6F0000-000000|700000-000000',
-                              'disconnect_check_value': 0.95,
+                               'disconnect_check_color_red': '730000-000000|6F0000-000000|700000-000000',  # 6E0000-000000|620000-000000
+                              'disconnect_check_color_blue': '2A3941-000000|2A3941-000000',
+                              'disconnect_check_value': 0.9,
                                'disconnect_confirm_color': '660000-000000',
                               'disconnect_confirm_value': 0.95,
                               'killer_number': 32,
                               'all_killer_name': ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
                                 "食人魔", "梦魇", "门徒", "小丑", "怨灵", "军团", "瘟疫", "鬼面", "魔王", "鬼武士",
                                 "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS", "地狱修士", "艺术家",
-                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"]}   # 判断的颜色值。相似度
+                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"],
+                              'match_stage_first_color': "999999-000000",
+                              'match_stage_offset_color': "10|0|999999-000000,0|10|999999-000000,11|11|999999-000000",
+                              'ready_stage_first_color': "999999-000000",
+                              'ready_stage_offset_color': "0|10|999999-000000,0|16|999999-000000,-9|6|999999-000000",
+                              'end_stage_first_color': "949494-000000",
+                              'end_stage_offset_color': "0|12|949494-000000,6|17|999999-000000,6|5|989898-000000",
+                              'ingame_icon_color': 'FFCC00-000000',
+                              'stage_judge_switch': 1}
     initialize()
     read_cfg()
     custom_select = CustomSelectKiller()
@@ -1657,13 +1820,20 @@ if __name__ == '__main__':
             }
         '''
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
+    # 判断游戏是否运行
+    if hwnd == 0:
+        win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示", win32con.MB_OK | win32con.MB_ICONWARNING)
+        sys.exit()
     max_click = 0  # 最少点几次不会上升
     front_times = 0  # 可上升部分的循环次数
     behind_times = 0  # 不可上升后的循环次数
     click_times = 1  # 角色点击次数，判断与输入值是否相等
     x, y = 548, 323  # 初始的坐标值[Second]
-    autospace_judge = False
     # input_num = dbd_window.main_ui.sb_input_count.value()  # 输入值
+    match_stage = "匹配大厅"  # 阶段判断参数
+    ready_stage = "准备房间"
+    end_stage = "游戏结束"  #
+    disconnect_check_area = 0  # 大退后判断区域状态码
     # 角色选择的参数
     ghX = [405, 548, 703, 854]
     ghY = [314, 323, 318, 302]
@@ -1677,9 +1847,11 @@ if __name__ == '__main__':
     killer_number = self_defined_parameter['killer_number']
     # lw.SetUserTimeLimit("[2023年2月10日0时0分]")
     main_pid = os.getpid()
-    afk_pid = 0
-    hotkey = threading.Thread(target=listen_key, args=(main_pid,), daemon=True)  #  args=(os.getpid(),)
+    # 创建子线程
+    hotkey = threading.Thread(target=listen_key, args=(main_pid,), daemon=True)  # args=(os.getpid(),)
     begingame = threading.Thread(target=AFK, daemon=True)
+    tip = threading.Thread(target=hall_tip, daemon=True)
+    autospace = threading.Thread(target=auto_space, daemon=True)
     hotkey.start()
     authorization()
     if eq(settings.value("UPDATE/cb_autocheck"), 'true'):
@@ -1687,3 +1859,6 @@ if __name__ == '__main__':
     # dbd_window.setStyleSheet(qss_style)
     dbd_window.show()
     sys.exit(app.exec())
+
+
+
