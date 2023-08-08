@@ -20,6 +20,7 @@ import PyQt5.QtCore as qc
 from DBDAutoScriptUI import Ui_MainWindow
 from selec_killerUI import Ui_Dialog
 from AdvancedParameterUI import Ui_AdvancedWindow
+from PyQt5.QtCore import Qt
 from Coord import *
 
 
@@ -883,7 +884,7 @@ def disconnect_check():
     disconnect_check_colorXY.area_check()
     ret1 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
                                disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_red'],
-                              self_defined_parameter['disconnect_check_value'], 300, 70, 70, 1, 1)  # 822,361,1113,436
+                              self_defined_parameter['disconnect_check_value'], 300, 20, 20, 1, 1)  # 822,361,1113,436
     if eq(blood_and_ceasma(), False):
         ret2 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
                                    disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_blue'],
@@ -1266,17 +1267,18 @@ def killer_action():
             if gt(random_number, 600):
                 for i in range(3):
                     move = random_movement()
-                    key_down(hwnd, move)
-                    time.sleep(0.5)
-                    key_up(hwnd, move)
+                    if ne(move, 'w'):
+                        key_down(hwnd, move)
+                        time.sleep(0.5)
+                        key_up(hwnd, move)
             # 技能
             random_number = random.randint(1, 1000)
             if gt(random_number, 700):
                 killer_skillclick()
-                direction = random_direction()
             # 转向
             random_number = random.randint(1, 1000)
             if gt(random_number, 600):
+                direction = random_direction()
                 key_down(hwnd, direction)
                 time.sleep(random_veertime())
                 key_up(hwnd, direction)
@@ -1287,8 +1289,8 @@ def killer_action():
             time.sleep(5)
             key_up(hwnd, 'w')
         elif lt(random_number, 400):
-            direction = random_direction()
             # 转向
+            direction = random_direction()
             key_down(hwnd, direction)
             time.sleep(random_veertime())
             key_up(hwnd, direction)
@@ -1299,9 +1301,10 @@ def killer_action():
             if gt(random_number, 600):
                 for i in range(3):
                     move = random_movement()
-                    key_down(hwnd, move)
-                    time.sleep(0.5)
-                    key_up(hwnd, move)
+                    if ne(move, 'w'):
+                        key_down(hwnd, move)
+                        time.sleep(0.5)
+                        key_up(hwnd, move)
             #ctrl
             random_number = random.randint(1, 1000)
             if gt(random_number, 500):
@@ -1322,13 +1325,17 @@ def killer_action():
             if gt(random_number, 600):
                 for i in range(3):
                     move = random_movement()
-                    key_down(hwnd, move)
-                    time.sleep(0.5)
-                    key_up(hwnd, move)
+                    if ne(move, 'w'):
+                        key_down(hwnd, move)
+                        time.sleep(0.5)
+                        key_up(hwnd, move)
             # 技能
-            random_number = random.randint(1, 1000)
-            if gt(random_number, 700):
-                killer_skill()
+            if ne(custom_select.select_killer_lst[character_num_b - 1], '设陷者'):
+                random_number = random.randint(1, 1000)
+                if gt(random_number, 700):
+                    killer_skill()
+            else:
+                time.sleep(3)
             # 转向
             random_number = random.randint(1, 1000)
             if gt(random_number, 600):
@@ -1354,16 +1361,20 @@ def killer_action():
             if gt(random_number, 600):
                 for i in range(3):
                     move = random_movement()
-                    key_down(hwnd, move)
-                    time.sleep(0.5)
-                    key_up(hwnd, move)
+                    if ne(move, 'w'):
+                        key_down(hwnd, move)
+                        time.sleep(0.5)
+                        key_up(hwnd, move)
             # 技能
-            random_number = random.randint(1, 1000)
-            if gt(random_number, 700):
-                if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
-                    # ctrl
-                    killer_ctrl()
-                killer_skill()
+            if ne(custom_select.select_killer_lst[character_num_b - 1], '设陷者'):
+                random_number = random.randint(1, 1000)
+                if gt(random_number, 700):
+                    if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+                        # ctrl
+                        killer_ctrl()
+                    killer_skill()
+            else:
+                time.sleep(3)
             time.sleep(5)
             key_up(hwnd, 'w')
 
@@ -1738,6 +1749,7 @@ if __name__ == '__main__':
     CFG_PATH = os.path.join(BASE_DIR, "cfg.ini")
     SEARCH_PATH = os.path.join(BASE_DIR, "searchfile.txt")
     SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("picture/dbdwindow.png"))
     dbd_window = DbdWindow()
