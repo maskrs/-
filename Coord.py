@@ -60,8 +60,8 @@ class Coord:
         self.x2_coor = int(self.x2_coor)
         self.y2_coor = int(self.y2_coor)
 
-    def find_color(self, target_color:str, sim=0.95):
-        lw.FindColor(self.x1_coor, self.y1_coor, self.x2_coor, self.y2_coor, target_color, sim, 0)
+    def find_color(self, target_color:str, sim=0.95, delay=0):
+        lw.FindColor(self.x1_coor, self.y1_coor, self.x2_coor, self.y2_coor, target_color, sim, delay)
         return lw.x(),lw.y()
 
 
