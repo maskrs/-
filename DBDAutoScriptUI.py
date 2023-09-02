@@ -182,5 +182,5 @@ class Ui_MainWindow(object):
         self.pb_advanced.setText(_translate("MainWindow", "高级..."))
         self.pb_start.setText(_translate("MainWindow", "开 始"))
         self.pb_stop.setText(_translate("MainWindow", "停 止"))
-        self.lb_version.setText(_translate("MainWindow", "ver 5.1.1"))
+        self.lb_version.setText(_translate("MainWindow", "ver 5.1.2"))
         self.lb_message.setText(_translate("MainWindow", "Q群：728284728"))

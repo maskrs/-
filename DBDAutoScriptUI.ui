@@ -409,7 +409,7 @@ QPushButton:hover {
        <string notr="true">color: rgb(130, 60, 200);</string>
       </property>
       <property name="text">
-       <string>ver 5.1.1</string>
+       <string>ver 5.1.2</string>
       </property>
      </widget>
      <widget class="QLabel" name="lb_message">

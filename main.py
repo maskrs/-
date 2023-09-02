@@ -2,27 +2,57 @@ import os.path
 import random
 import time
 import threading
+import sys
 import webbrowser
 import pyautogui as py
+import win32api
 import requests, re
 import win32gui
 import jsonlines
+import pytesseract
+import psutil
+import json
+import win32con
+import PyQt5.QtCore as qc
+from PIL import Image
+from PIL import ImageGrab
 from keyboard_operation import key_down, key_up
 from operator import lt, eq, gt, ge, ne, floordiv, mod
 from pynput import keyboard
-import psutil
-import json
 from win32api import MessageBox
-import win32con
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
-import PyQt5.QtCore as qc
+from PyQt5.QtCore import Qt
+# from PyQt5.QtGui import QGuiApplication
 from DBDAutoScriptUI import Ui_MainWindow
 from selec_killerUI import Ui_Dialog
 from AdvancedParameterUI import Ui_AdvancedWindow
-from PyQt5.QtCore import Qt
-from Coord import *
 
+class Coord:
+    def __init__(self, x1_coor, y1_coor, x2_coor=0, y2_coor=0):
+        self.x1_coor = x1_coor
+        self.y1_coor = y1_coor
+        self.x2_coor = x2_coor
+        self.y2_coor = y2_coor
+
+    def processed_coord(self):
+        # 获取缩放后的屏幕分辨率,并获得比例
+        ScreenX = win32api.GetSystemMetrics(0)
+        ScreenY = win32api.GetSystemMetrics(1)
+        factorX = ScreenX / 1920
+        factory = ScreenY / 1080
+        # processed_coordX = self.x * factorX
+        # processed_coordY = self.y * factory
+        self.x1_coor = self.x1_coor * factorX
+        self.y1_coor = self.y1_coor * factory
+        self.x2_coor = self.x2_coor * factorX
+        self.y2_coor = self.y2_coor * factory
+
+    def area_check(self):
+        self.x1_coor = int(self.x1_coor)
+        self.y1_coor = int(self.y1_coor)
+        self.x2_coor = int(self.x2_coor)
+        self.y2_coor = int(self.y2_coor)
 
 def begin():
     save_cfg()
@@ -100,7 +130,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
 
     def pb_research_click(self): #-->> 废弃
         global killer_number
-        lw.SetDict(0, "DbdKillerNames.txt")  # 设置字库
+        # lw.SetDict(0, "DbdKillerNames.txt")  # 设置字库
         win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
         moveclick(141, 109, 1, 1)  # 打开角色按钮
@@ -172,6 +202,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         self.select_ui.cb_eqishi.setChecked(True)
         self.select_ui.cb_baigu.setChecked(True)
         self.select_ui.cb_jidian.setChecked(True)
+        self.select_ui.cb_yixing.setChecked(True)
 
     def pb_invert_click(self):
         # 随版本更改
@@ -207,6 +238,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         self.select_ui.cb_eqishi.toggle()
         self.select_ui.cb_baigu.toggle()
         self.select_ui.cb_jidian.toggle()
+        self.select_ui.cb_yixing.toggle()
 
     def pb_save_click(self):
         save_cfg()
@@ -239,8 +271,8 @@ class CustomSelectKiller:   #-->> 废弃
         killername = Coord(373, 0, 657, 160)
         killername.processed_coord()
         killername.area_check()
-        self.killer_name = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.y2_coor,
-                                  "#125", 0.90)
+        # self.killer_name = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.y2_coor,
+        #                           "#125", 0.90)
         if self.killer_name in self.all_killer_name:
             self.write_killer_name()
             if self.killer_name == "奇点":  # 随版本更改
@@ -261,8 +293,8 @@ class CustomSelectKiller:   #-->> 废弃
             killername = Coord(239, 0, 359, 196)
             killername.processed_coord()
             killername.area_check()
-            self.ocr_notown = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.
-                                     y2_coor, "#125", 0.90)
+            # self.ocr_notown = lw.Ocr(killername.x1_coor, killername.y1_coor, killername.x2_coor, killername.
+            #                          y2_coor, "#125", 0.90)
             if self.ocr_notown == "角色":
                 self.ocr_error = 1
                 time.sleep(2)
@@ -457,6 +489,8 @@ class CustomSelectKiller:   #-->> 废弃
             self.select_killer_lst.append("白骨商人")
         if settings.value("CUSSEC/cb_jidian"):
             self.select_killer_lst.append("奇点")
+        if settings.value("CUSSEC/cb_yixing"):
+            self.select_killer_lst.append("异形")
 
     def match_select_killer_name(self):
         for i in self.select_killer_lst:
@@ -471,11 +505,11 @@ class CustomSelectKiller:   #-->> 废弃
 
 def initialize():
     """ 程序初始化 """
-    # 随版本更改
     global self_defined_parameter
     if not os.path.exists(CFG_PATH):
         with open(CFG_PATH, 'w') as configfile:
             configfile.write("")
+        # 随版本更改
         settings.setValue("CPCI/rb_survivor", False)
         settings.setValue("CPCI/cb_survivor_do", False)
         settings.setValue("CPCI/rb_killer", False)
@@ -516,6 +550,7 @@ def initialize():
         settings.setValue("CUSSEC/cb_eqishi", False)
         settings.setValue("CUSSEC/cb_baigu", False)
         settings.setValue("CUSSEC/cb_jidian", False)
+        settings.setValue("CUSSEC/cb_yixing", False)
 
     if not os.path.exists(SDPARAMETER_PATH):
         with jsonlines.open(SDPARAMETER_PATH, mode='w') as writer:
@@ -565,6 +600,7 @@ def save_cfg():
     settings.setValue("CUSSEC/cb_eqishi", dbd_window.sel_dialog.select_ui.cb_eqishi.isChecked())
     settings.setValue("CUSSEC/cb_baigu", dbd_window.sel_dialog.select_ui.cb_baigu.isChecked())
     settings.setValue("CUSSEC/cb_jidian", dbd_window.sel_dialog.select_ui.cb_jidian.isChecked())
+    settings.setValue("CUSSEC/cb_yixing", dbd_window.sel_dialog.select_ui.cb_yixing.isChecked())
 
 def read_cfg():
     """读取配置文件"""
@@ -610,6 +646,7 @@ def read_cfg():
     dbd_window.sel_dialog.select_ui.cb_eqishi.setChecked(json.loads(settings.value("CUSSEC/cb_eqishi")))
     dbd_window.sel_dialog.select_ui.cb_baigu.setChecked(json.loads(settings.value("CUSSEC/cb_baigu")))
     dbd_window.sel_dialog.select_ui.cb_jidian.setChecked(json.loads(settings.value("CUSSEC/cb_jidian")))
+    dbd_window.sel_dialog.select_ui.cb_yixing.setChecked(json.loads(settings.value("CUSSEC/cb_yixing")))
     if settings.value("CPCI/rb_survivor") == "true":
         dbd_window.main_ui.cb_survivor_do.setEnabled(True)
         dbd_window.main_ui.rb_fixed_mode.setDisabled(True)
@@ -655,7 +692,7 @@ def authorization():
 
 def update():
     """check the update"""
-    ver_now = 'V5.1.1'
+    ver_now = 'V5.1.2'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -670,7 +707,7 @@ def update():
 def hall_tip():
     """Child thread, survivor hall tip"""
     while True:
-        if eq(blood_and_ceasma(), True) and eq(setting_button(), True):
+        if eq(readyhall(), True):
             py.press('enter')
             py.press('delete', 3)
             py.write('AFK')
@@ -729,49 +766,91 @@ def listen_key(pid):
     with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
         listener.join()
 
-
-def blood_and_ceasma():
-    """check the blood and ceasma in the hall
+def OCR(x1, y1, x2, y2,sum=128):
+    """OCR识别图像，返回字符串
+    :return: string"""
+    ocrXY = Coord(x1, y1, x2, y2)
+    ocrXY.processed_coord()
+    ocrXY.area_check()
+    image = ImageGrab.grab(bbox=(ocrXY.x1_coor, ocrXY.y1_coor, ocrXY.x2_coor, ocrXY.y2_coor))
+    # 保存图像
+    image.save('image.jpg')
+    image = Image.open('image.jpg')
+    # 将图片转换为灰度图像
+    grayscale_image = image.convert('L')
+    # 对灰度图像进行二值化处理
+    binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
+    # 保存二值化后的图片
+    binary_image.save('image.jpg')
+    # 读取图像
+    img = Image.open('image.jpg')
+    custom_config = r'--oem 3 --psm 6'
+    # 使用Tesseract OCR引擎识别图像中的文本
+    result = pytesseract.image_to_string(img, config=custom_config, lang='chi_sim')
+    return result
+def starthall():
+    """check the start  hall
     :return: bool"""
-    Blood_and_CeasmaXY = Coord(1105, 0, 1715, 144)  # 1091, 53, 1628, 93
-    Blood_and_CeasmaXY.processed_coord()
-    Blood_and_CeasmaXY.area_check()
-    ret1, ret2 = Blood_and_CeasmaXY.find_color(self_defined_parameter['blood_color'], self_defined_parameter['blood_value'])
-    ret3, ret4 = Blood_and_CeasmaXY.find_color(self_defined_parameter['ceasma_color'], self_defined_parameter['ceasma_value'])  # 3A1752
-    if gt(ret1, 0) and gt(ret2, 0) and gt(ret3, 0) and gt(ret4, 0):
+    ocr = OCR(1666, 915, 1808, 955)
+    if "开始游戏" in ocr:
+        return True
+    else:
+        return False
+def readyhall():
+    """check the  ready hall
+    :return: bool"""
+    ocr = OCR(1666, 915, 1808, 955)
+    if "准备就绪" in ocr:
         return True
     else:
         return False
 
-def stage_judge():
-    """判断游戏所处在的阶段"""
-    global match_stage, ready_stage, end_stage
-    match_stageXY = Coord(1672, 919, 1707, 952)
-    match_stageXY.processed_coord()
-    match_stageXY.area_check()
-    match_stage = lw.FindMultiColor(match_stageXY.x1_coor, match_stageXY.y1_coor, match_stageXY.x2_coor, match_stageXY.y2_coor,
-                                    self_defined_parameter['match_stage_first_color'],self_defined_parameter['match_stage_offset_color'],
-                                   0.8, 0, 600)
-    if match_stage == 1:
-        match_stage = "匹配大厅"
+def readycancle():
+    """检查游戏准备后的取消，消失就进入对局加载
+    :return: bool"""
+    ocr = OCR(1771, 936, 1817, 957, 110)
+    if "取消" in ocr:
+        return True
+    else:
+        return False
 
-    ready_stageXY = Coord(1670, 916, 1708, 953)
-    ready_stageXY.processed_coord()
-    ready_stageXY.area_check()
-    ready_stage = lw.FindMultiColor(ready_stageXY.x1_coor, ready_stageXY.y1_coor, ready_stageXY.x2_coor, ready_stageXY.y2_coor,
-                                    self_defined_parameter['ready_stage_first_color'], self_defined_parameter['ready_stage_offset_color'],
-                                    0.8, 0, 600)
-    if ready_stage == 1:
-        ready_stage = "准备房间"
-
-    end_stageXY = Coord(1753, 993, 1784, 1022)
-    end_stageXY.processed_coord()
-    end_stageXY.area_check()
-    end_stage = lw.FindMultiColor(end_stageXY.x1_coor, end_stageXY.y1_coor, end_stageXY.x2_coor, end_stageXY.y2_coor,
-                                  self_defined_parameter['end_stage_first_color'],self_defined_parameter['end_stage_offset_color'],
-                                  0.8, 0, 600)
-    if end_stage == 1:
-        end_stage = "游戏结束"
+def gameover():
+    """检查对局后的继续
+    :return: bool"""
+    ocr = OCR(1756, 997, 1810, 1026, 120)
+    if "继续" in ocr:
+        return True
+    else:
+        return False
+# def stage_judge():
+#     """判断游戏所处在的阶段"""
+#     global match_stage, ready_stage, end_stage
+#     match_stageXY = Coord(1672, 919, 1707, 952)
+#     match_stageXY.processed_coord()
+#     match_stageXY.area_check()
+#     match_stage = lw.FindMultiColor(match_stageXY.x1_coor, match_stageXY.y1_coor, match_stageXY.x2_coor, match_stageXY.y2_coor,
+#                                     self_defined_parameter['match_stage_first_color'],self_defined_parameter['match_stage_offset_color'],
+#                                    0.8, 0, 600)
+#     if match_stage == 1:
+#         match_stage = "匹配大厅"
+#
+#     ready_stageXY = Coord(1670, 916, 1708, 953)
+#     ready_stageXY.processed_coord()
+#     ready_stageXY.area_check()
+#     ready_stage = lw.FindMultiColor(ready_stageXY.x1_coor, ready_stageXY.y1_coor, ready_stageXY.x2_coor, ready_stageXY.y2_coor,
+#                                     self_defined_parameter['ready_stage_first_color'], self_defined_parameter['ready_stage_offset_color'],
+#                                     0.8, 0, 600)
+#     if ready_stage == 1:
+#         ready_stage = "准备房间"
+#
+#     end_stageXY = Coord(1753, 993, 1784, 1022)
+#     end_stageXY.processed_coord()
+#     end_stageXY.area_check()
+#     end_stage = lw.FindMultiColor(end_stageXY.x1_coor, end_stageXY.y1_coor, end_stageXY.x2_coor, end_stageXY.y2_coor,
+#                                   self_defined_parameter['end_stage_first_color'],self_defined_parameter['end_stage_offset_color'],
+#                                   0.8, 0, 600)
+#     if end_stage == 1:
+#         end_stage = "游戏结束"
 
 def setting_button():
     """check the setting button
@@ -827,17 +906,13 @@ def segment_reset():
 def rites():
     """check rites complete
     :return:bool"""
-    ritesXY = Coord(239, 615, 335, 651)
-    ritesXY.processed_coord()
-    ritesXY.area_check()
-    ret1,ret2 = ritesXY.find_color(self_defined_parameter['rites_color'], self_defined_parameter['rites_value'])
-    if gt(ret1, 0) and gt(ret2, 0):
+    ocr = OCR(102, 269, 430, 339)
+    if "每日祭礼" in ocr:
         return True
     else:
         return False
 
 # 检测活动奖励  #####未完成
-
 def event_rewards():
     """check the event rewards
     :return: bool"""
@@ -850,26 +925,20 @@ def daily_ritual_main():
     """check the daily task after serious disconnect -->[main]
     :return: bool
     """
-    daily_ritual_mainXY = Coord(470, 284, 507, 302)
-    daily_ritual_mainXY.processed_coord()
-    daily_ritual_mainXY.area_check()
-    ret1, ret2 = daily_ritual_mainXY.find_color(self_defined_parameter['daily_ritual_main_color'], self_defined_parameter['daily_ritual_main_value'])
-    if gt(ret1, 0) and gt(ret2, 0):
+    ocr = OCR(447, 268, 674, 338)
+    if "每日祭礼" in ocr:
         return True
     else:
         return False
 
 
-def exit_button_main():
+def mainjudge():
     """after serious disconnect.
     check the game whether return the main menu. -->[quit button]
     :return: bool
     """
-    exit_button_mainXY = Coord(504, 935, 569, 997)
-    exit_button_mainXY.processed_coord()
-    exit_button_mainXY.area_check()
-    ret1, ret2 = exit_button_mainXY.find_color(self_defined_parameter['exit_button_main_color'], self_defined_parameter['exit_button_main_value'])
-    if gt(ret1, 0) and gt(ret2, 0):
+    ocr = OCR(170, 656, 265, 714, 120)
+    if "商城" in ocr:
         return True
     else:
         return False
@@ -878,36 +947,46 @@ def exit_button_main():
 def disconnect_check():
     """After disconnect check the connection status
     :return: bool"""
-    global disconnect_check_area
-    disconnect_check_colorXY = Coord(1043, 350, 1113, 391)
-    disconnect_check_colorXY.processed_coord()
-    disconnect_check_colorXY.area_check()
-    ret1 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
-                               disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_red'],
-                              self_defined_parameter['disconnect_check_value'], 300, 20, 20, 1, 1)  # 822,361,1113,436
-    if eq(blood_and_ceasma(), False):
-        ret2 = lw.FindColorBlockEx(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor, disconnect_check_colorXY.x2_coor,
-                                   disconnect_check_colorXY.y2_coor, self_defined_parameter['disconnect_check_color_blue'],
-                                   self_defined_parameter['disconnect_check_value'], 300, 20, 20, 1 , 1)
-        if ne(ret2, None):
-            disconnect_check_area = 1
-            return True
-    if ne(ret1, None):
+    ocr = OCR(299, 614, 1796, 862, 120)
+    if "好的" in ocr:
+        return True
+    else:
+        return False
+def news():
+    """断线重连后的新闻
+    :return: bool"""
+    ocr = OCR(882, 88, 1030, 153)
+    if "新内容" in ocr:
         return True
     else:
         return False
 
-
 def disconnect_confirm():
     """After disconnection click confirm button. not need process.
     :return: int"""
-    global disconnect_check_area
-    disconnect_check_X = 319
-    if disconnect_check_area == 1:
-        disconnect_check_X = 1000
-    lw.FindColor(disconnect_check_X, 465, 1657, 946, self_defined_parameter['disconnect_confirm_color'],
-                 self_defined_parameter['disconnect_confirm_value'], 0)
-    return lw.x(), lw.y()
+    disconnect_check_colorXY = Coord(299, 614, 1796, 862)
+    disconnect_check_colorXY.processed_coord()
+    disconnect_check_colorXY.area_check()
+    image = ImageGrab.grab(bbox=(disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor,
+              disconnect_check_colorXY.x2_coor, disconnect_check_colorXY.y2_coor))
+    # 保存图像
+    image.save('image.jpg')
+    image = Image.open('image.jpg')
+    # 将图片转换为灰度图像
+    grayscale_image = image.convert('L')
+    # 对灰度图像进行二值化处理
+    binary_image = grayscale_image.point(lambda x: 0 if x < 120 else 255, '1')
+    # 保存二值化后的图片
+    binary_image.save('image.jpg')
+    # 读取图像
+    img = Image.open('image.jpg')
+    custom_config = r'--oem 3 --psm 6'
+    # 使用Tesseract OCR引擎识别图像中的文本
+    result = pytesseract.image_to_boxes(img, config=custom_config, lang='chi_sim')
+    result = result.split(' ')
+    if ne(len(result), 0):
+        confirmX, confirmY = int(result[3]), int(result[4])
+        moveclick(disconnect_check_colorXY.x1_coor+confirmX, disconnect_check_colorXY.y2_coor-confirmY, 1, 1)
 
 # def skill_check():
 #     """skill check in the game
@@ -952,24 +1031,21 @@ def reconnect():
     :return: bool -->TRUE
     """
     time.sleep(2)
-    # moveclick(586, 679, click_delay=1)  # 错误代码1
+    # moveclick(586, 679, cli
     # moveclick(570, 710, click_delay=1)  # 错误代码2
     # moveclick(594, 721, click_delay=1)  # 错误代码3
     # moveclick(1334, 635, click_delay=1)  # 错误代码4
     # moveclick(1429, 640, click_delay=1)  # 错误代码5
     # moveclick(1389, 670, click_delay=1)  # 错误代码6
     # moveclick(563, 722, click_delay=1)  # 错误代码7
-    for i in range(9):
-        confirmX, confirmY = disconnect_confirm()
-        py.moveTo(confirmX, confirmY)
-        py.click()
-        time.sleep(1)
+    while eq(disconnect_check(), True):
+        disconnect_confirm()
     # 段位重置
-    if eq(segment_reset(), True):
-        moveclick(1462, 841)
+    # if eq(segment_reset(), True):
+    #     moveclick(1462, 841)
     # 检测血点，判断断线情况
-    if eq(blood_and_ceasma(), True):  # 小退
-        if eq(setting_button(), False):  # 意味着不在大厅
+    if eq(starthall(), True) or eq(readyhall(), True) or eq(gameover(), True):  # 小退
+        if eq(gameover(), True):  # 意味着不在大厅
             moveclick(1335, 326, click_delay=1)
             moveclick(1736, 1010)
             return True
@@ -980,27 +1056,25 @@ def reconnect():
             py.click()
             time.sleep(5)
             if eq(disconnect_check(), True):
-                moveclick(1335, 635, click_delay=1)  # 重进
-                moveclick(1335, 667, click_delay=1)  # 重进错误点击
-                py.click()  # 重进
+                disconnect_confirm()
                 continue
             time.sleep(1)
-            moveclick(1453, 628, click_delay=1)  # 错误
+            # moveclick(1453, 628, click_delay=1)  # 错误
             #### 活动奖励
-
-            moveclick(1413, 992, click_delay=1)  # 新闻点击
-            moveclick(1430, 744, click_delay=1)  # 账号连接
-            moveclick(1631, 966, click_delay=1)  # 转生系统
-            if eq(blood_and_ceasma(), True):
-                while eq(blood_and_ceasma(), True):
-                    moveclick(0, 0, 0.5, 1)
-                    moveclick(1761, 1009, 3, 1)
-                return True
+            if eq(news(), True):
+                moveclick(1413, 992, click_delay=1)  # 新闻点击
+            # moveclick(1430, 744, click_delay=1)  # 账号连接
+            # moveclick(1631, 966, click_delay=1)  # 转生系统
+            # if eq(blood_and_ceasma(), True):
+            #     while eq(blood_and_ceasma(), True):
+            #         moveclick(0, 0, 0.5, 1)
+            #         moveclick(1761, 1009, 3, 1)
+            #     return True
             # 判断每日祭礼
             if eq(daily_ritual_main(), True):
                 moveclick(545, 880, click_delay=1)
             # 是否重进主页面判断
-            if eq(exit_button_main(), True):
+            if eq(mainjudge(), True):
                 # 通过阵营选择判断返回大厅
                 if eq(settings.value("CPCI/rb_survivor"), True):
                     moveclick(143, 261)
@@ -1076,7 +1150,7 @@ def random_veer(veer_time):
 def hurt():
     """check survivor whether hurt
     ":return: bool"""
-    hurtXY = Coord(102, 450, 159, 499)
+    hurtXY = Coord(106, 451, 150, 498)  # 102, 450, 159, 499
     hurtXY.processed_coord()
     hurtXY.area_check()
     ret1, ret2 = hurtXY.find_color("9F1409-000000")
@@ -1088,7 +1162,7 @@ def hurt():
 def on_hook():
     """check survivor whether on the hook
     :return: bool"""
-    hookXY = Coord(189, 492, 325, 508)
+    hookXY = Coord(106, 451, 150, 498)  # 189, 492, 325, 508
     hookXY.processed_coord()
     hookXY.area_check()
     ret1, ret2 = hookXY.find_color("5F261E-000000")
@@ -1276,9 +1350,9 @@ def killer_action():
             if gt(random_number, 700):
                 killer_skillclick()
             # 转向
+            direction = random_direction()
             random_number = random.randint(1, 1000)
             if gt(random_number, 600):
-                direction = random_direction()
                 key_down(hwnd, direction)
                 time.sleep(random_veertime())
                 key_up(hwnd, direction)
@@ -1289,8 +1363,8 @@ def killer_action():
             time.sleep(5)
             key_up(hwnd, 'w')
         elif lt(random_number, 400):
-            # 转向
             direction = random_direction()
+            # 转向
             key_down(hwnd, direction)
             time.sleep(random_veertime())
             key_up(hwnd, direction)
@@ -1482,7 +1556,7 @@ def character_selection():
     wheelcoord = Coord(404, 536)  # 第五个坐标，提前处理
     wheelcoord.processed_coord()
     back_first()
-    if lt(timey, 6):  # 最大的换行次数+1
+    if lt(timey, 7):  # 最大的换行次数+1
         if eq(timex, 0):
             timey -= 1
             timex = 4
@@ -1497,7 +1571,7 @@ def character_selection():
                     frequency = 0
                     break
         moveclick(ghX[timex-1], ghY[timex-1], 1.5)
-    elif gt(timey, 5):  # 最大换行次数
+    elif gt(timey, 6):  # 最大换行次数
         py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
         time.sleep(1.5)
         while True:
@@ -1507,10 +1581,10 @@ def character_selection():
             if eq(frequency, timey):
                 frequency = 0
                 break
-        if eq(timey, 6) and eq(timex, 0):  # 第一个判断最大换行次数加一
+        if eq(timey, 7) and eq(timex, 0):  # 第一个判断最大换行次数加一
             moveclick(ghX[3], ghY[3], 1.5)
         else:
-            final_number = character_num[character_num_b] - 24  # (最大换行+1)*4
+            final_number = character_num[character_num_b] - 28  # (最大换行+1)*4
             # 最后两行的序数，减1为数组序数。再减1为下标
             if gt(final_number, 1):
                 final_number -= 2  # -->>
@@ -1548,6 +1622,7 @@ def AFK():
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
+    moveclick(1, 1)
     while True:
         reconnection = False
         '''
@@ -1557,12 +1632,8 @@ def AFK():
         matching = False
         while not matching:
             # 判断条件是否成立
-            if eq(blood_and_ceasma(), True):
+            if eq(starthall(), True):
                 # 判断游戏所处的阶段
-                if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    stage_judge()
-                    if match_stage != "匹配大厅":
-                        break
 
                 """
                 在这里判断选择的模式，并从前台提取数值。
@@ -1591,8 +1662,7 @@ def AFK():
                     time.sleep(1)
                     py.click()
                 # 进行准备
-                while eq(ready_red(), False):  # debug:False -->test
-                    moveclick(1, 1, 0.5, 1)
+                while eq(starthall(), True):  # debug:False -->test
                     moveclick(1742, 931, 1, 0.5)  # 处理坐标，开始匹配
                     moveclick(20, 689, 1.5)  # 商城上空白
                     if eq(disconnect_check(), True):  # 断线检测
@@ -1611,14 +1681,8 @@ def AFK():
         准备加载
         '''
         ready_load = False  # debug:False -->test
-        if eq(self_defined_parameter['stage_judge_switch'], 1):
-            if ne(match_stage, "匹配大厅"):
-                ready_load = True
         while not ready_load:
-            if eq(disconnect_check(), True):  # 断线检测
-                reconnection = reconnect()
-                ready_load = True  # 检测到断线，重连之后跳出循环，
-            elif eq(blood_and_ceasma(), False):
+            if eq(readycancle(), False):
                 ready_load = True
 
         # 重连返回值的判断
@@ -1630,20 +1694,13 @@ def AFK():
         '''
         ready_room = False  # debug:False -->True
         while not ready_room:
-            if eq(setting_button(), True):
-                # 判断游戏所处的阶段
-                if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    stage_judge()
-                    if ready_stage != "准备房间":
-                        break
-                while eq(ready_red(), False):
-                    if eq(disconnect_check(), True):
-                        break
-                    time.sleep(5)
-                    moveclick(1, 1, 2, 2)
-                    moveclick(1742, 931, 2, 0.5)
-                    moveclick(20, 689)  # 商城上空白
-                ready_room = True
+            if eq(readyhall(), True):
+                time.sleep(5)
+                moveclick(1, 1, 2, 2)
+                moveclick(1742, 931, 2, 0.5)
+                moveclick(20, 689)  # 商城上空白
+                if eq(readyhall(), False):
+                    ready_room = True
             elif eq(disconnect_check(), True):
                 reconnection = reconnect()
                 ready_room = True
@@ -1656,16 +1713,10 @@ def AFK():
         '''
 
         game_load = False
-        if eq(self_defined_parameter['stage_judge_switch'], 1):
-            if ne(ready_stage, "准备房间"):
-                game_load = True
         while not game_load:
-            if eq(blood_and_ceasma(), False):
+            if eq(readycancle(), False):
                 game_load = True
                 time.sleep(5)
-            elif eq(disconnect_check(), True):
-                reconnection = reconnect()
-                game_load = True
         # 重连返回值判断
         if eq(reconnection, True):
             continue
@@ -1674,38 +1725,25 @@ def AFK():
         局内
         '''
         game = False
-        ingame_icon_1XY = Coord(174, 950, 201, 977)
-        ingame_icon_1XY.processed_coord()
-        ingame_icon_1XY.area_check()
-        ingame_icon_2XY = Coord(825, 914, 1145, 965)
-        ingame_icon_2XY.processed_coord()
-        ingame_icon_2XY.area_check()
         while not game:
-            if eq(blood_and_ceasma(), True):
+            if eq(gameover(), True):
                 moveclick(1, 1, 0.5, 1)
                 time.sleep(2)
                 # 段位重置
-                if eq(segment_reset(), True):
-                    moveclick(1462, 841)
+                # if eq(segment_reset(), True):
+                #     moveclick(1462, 841)
                 # 祭礼完成
                 if eq(rites(), True):
                     moveclick(396, 718, 0.5, 1)
                     moveclick(140, 880)
                 time.sleep(5)
-                # 判断所处的游戏阶段
-                if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    stage_judge()
-                    if end_stage != "游戏结束":
-                        if match_stage == "匹配大厅" or ready_stage == "准备房间":
-                            break
-                        else:
-                            continue
+
                 # 判断是否开启
                 if eq(settings.value("CPCI/cb_killer_do"), True) and eq(settings.value("CPCI/rb_killer"), True):
                     auto_message()
                 moveclick(1761, 1009, 0.5, 1)  # return hall
                 py.click()
-                if eq(blood_and_ceasma(), False):
+                if eq(gameover(), False):
                     game = True
                 elif eq(disconnect_check(), True):
                     reconnection = reconnect()
@@ -1719,36 +1757,22 @@ def AFK():
                 elif eq(settings.value("CPCI/rb_random_mode"), True):
                     killer_action()
                 time.sleep(1)
-
-                ingame_icon_1 = ingame_icon_1XY.find_color(self_defined_parameter['ingame_icon_color'], 0.9, 500)
-                    # lw.FindColorBlockEx(ingame_icon_1XY.x1_coor, ingame_icon_1XY.y1_coor, ingame_icon_1XY.x2_coor,
-                    #                                 ingame_icon_1XY.y2_coor, self_defined_parameter['ingame_icon_color'],
-                    #                                 0.90, 10, 10, 10, 1, 0))
-                ingame_icon_2 = ingame_icon_2XY.find_color(self_defined_parameter['ingame_icon_color'], 0.9, 500)
-                    # lw.FindColorBlockEx(ingame_icon_2XY.x1_coor, ingame_icon_2XY.y1_coor, ingame_icon_2XY.x2_coor,
-                    #                               ingame_icon_2XY.y2_coor, self_defined_parameter['ingame_icon_color'],
-                    #                               0.90, 10, 10, 10, 1, 0))
-                if eq(ingame_icon_1, None) or eq(ingame_icon_2, None):
-                    if eq(disconnect_check(), True):
-                        reconnection = reconnect()
-                        game = True
+                if eq(disconnect_check(), True):
+                    reconnection = reconnect()
+                    game = True
 
         # 重连返回值判断
         if eq(reconnection, True):
             continue
 
-
-
-    # begin.join()
-    # hotkey.join()
-
-
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     # DBDAS_PATH = os.path.join(BASE_DIR, "DBDAutoScript")
+    OCR_PATH = "\\tesseract-ocr\\tesseract.exe"
     CFG_PATH = os.path.join(BASE_DIR, "cfg.ini")
     SEARCH_PATH = os.path.join(BASE_DIR, "searchfile.txt")
     SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
+    pytesseract.pytesseract.tesseract_cmd = ''.join([BASE_DIR, OCR_PATH])
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("picture/dbdwindow.png"))
@@ -1778,11 +1802,15 @@ if __name__ == '__main__':
                               'disconnect_check_value': 0.9,
                                'disconnect_confirm_color': '660000-000000',
                               'disconnect_confirm_value': 0.95,
-                              'killer_number': 32,
+                              'killer_number': 33,
                               'all_killer_name': ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
                                 "食人魔", "梦魇", "门徒", "小丑", "怨灵", "军团", "瘟疫", "鬼面", "魔王", "鬼武士",
                                 "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS", "地狱修士", "艺术家",
-                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点"],
+                                "贞子", "影魔", "操纵者", "恶骑士", "白骨商人", "奇点", "异形"],
+                              'survivor_hurt_color': 'BF221F-000000',
+                              'survivor_hurt_value': '0.85',
+                              'survivor_on_hook_color': 'BEBCB9-000000',
+                              'survivor_on_hook_value': '0.85',
                               'match_stage_first_color': "999999-000000",
                               'match_stage_offset_color': "10|0|999999-000000,0|10|999999-000000,11|11|999999-000000",
                               'ready_stage_first_color': "999999-000000",
@@ -1871,6 +1899,3 @@ if __name__ == '__main__':
     # dbd_window.setStyleSheet(qss_style)
     dbd_window.show()
     sys.exit(app.exec())
-
-
-
