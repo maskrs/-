@@ -703,7 +703,15 @@ def update():
         if eq(confirm, 6):  # 打开
             webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
 
-
+def notice():
+    """take a message"""
+    notice_now = 'test git'
+    html_str = requests.get('https://gitee.com/kioley/test-git').content.decode()
+    notice_new = re.search('title>(.*?)<', html_str, re.S).group(1)[0:8]
+    notice = re.search('title>(.*?)<', html_str, re.S).group(1)[10:]
+    print(notice_new)
+    if ne(notice_now, notice_new):
+        win32api.MessageBox(0, notice, "通知", win32con.MB_OK | win32con.MB_ICONINFORMATION)
 def hall_tip():
     """Child thread, survivor hall tip"""
     while True:
@@ -1634,7 +1642,6 @@ def AFK():
             # 判断条件是否成立
             if eq(starthall(), True):
                 # 判断游戏所处的阶段
-
                 """
                 在这里判断选择的模式，并从前台提取数值。
                 挂机模式 值 = 轮换 则再判断为哪种模式；如果值 = 固定 则等待time
@@ -1742,7 +1749,7 @@ def AFK():
                 if eq(settings.value("CPCI/cb_killer_do"), True) and eq(settings.value("CPCI/rb_killer"), True):
                     auto_message()
                 moveclick(1761, 1009, 0.5, 1)  # return hall
-                py.click()
+                moveclick(1, 1)
                 if eq(gameover(), False):
                     game = True
                 elif eq(disconnect_check(), True):
@@ -1768,11 +1775,11 @@ def AFK():
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     # DBDAS_PATH = os.path.join(BASE_DIR, "DBDAutoScript")
-    OCR_PATH = "\\tesseract-ocr\\tesseract.exe"
+    OCR_PATH = os.path.join(BASE_DIR,"tesseract-ocr\\tesseract.exe")
     CFG_PATH = os.path.join(BASE_DIR, "cfg.ini")
     SEARCH_PATH = os.path.join(BASE_DIR, "searchfile.txt")
     SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
-    pytesseract.pytesseract.tesseract_cmd = ''.join([BASE_DIR, OCR_PATH])
+    pytesseract.pytesseract.tesseract_cmd = OCR_PATH
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("picture/dbdwindow.png"))
@@ -1894,6 +1901,7 @@ if __name__ == '__main__':
     autospace = threading.Thread(target=auto_space, daemon=True)
     hotkey.start()
     authorization()
+    notice()
     if eq(settings.value("UPDATE/cb_autocheck"), 'true'):
         update()
     # dbd_window.setStyleSheet(qss_style)
