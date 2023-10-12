@@ -1,7 +1,6 @@
 # &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;黎明杀机挂机工具【DBD_AFK_TOOL】   
 
 ## ※ 注意：挂机行为存在被BAN风险，任何后果与本工具无关。  
-## ~☞ 有任何问题请在[Github Issues](https://github.com/maskrs/DBD_AFK_TOOL/issues)中留言，或者在[讨论区](https://github.com/maskrs/DBD_AFK_TOOL/discussions)交流。~  
 |工具功能|
 |  :----        |
 |1.工具实现对局全自动循环|
