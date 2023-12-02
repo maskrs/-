@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>369</width>
-    <height>550</height>
+    <width>441</width>
+    <height>583</height>
    </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>441</width>
+    <height>583</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>选择屠夫</string>
@@ -18,8 +24,8 @@
     <rect>
      <x>-1</x>
      <y>-1</y>
-     <width>371</width>
-     <height>551</height>
+     <width>441</width>
+     <height>581</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -33,7 +39,7 @@
      <rect>
       <x>42</x>
       <y>100</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -49,13 +55,16 @@
     <property name="checked">
      <bool>false</bool>
     </property>
+    <property name="tristate">
+     <bool>false</bool>
+    </property>
    </widget>
    <widget class="QCheckBox" name="cb_dingdang">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>101</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -75,9 +84,9 @@
    <widget class="QCheckBox" name="cb_dianjv">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>101</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -97,9 +106,9 @@
    <widget class="QCheckBox" name="cb_hushi">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>101</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -111,7 +120,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -130,7 +139,7 @@
      <rect>
       <x>42</x>
       <y>141</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -142,7 +151,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -156,9 +165,9 @@
    <widget class="QCheckBox" name="cb_maishu">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>141</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -170,7 +179,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -184,9 +193,9 @@
    <widget class="QCheckBox" name="cb_linainai">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>141</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -198,7 +207,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -212,9 +221,9 @@
    <widget class="QCheckBox" name="cb_laoyang">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>141</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -226,7 +235,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -242,7 +251,7 @@
      <rect>
       <x>42</x>
       <y>181</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -254,7 +263,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -268,9 +277,9 @@
    <widget class="QCheckBox" name="cb_fulaidi">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>181</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -290,9 +299,9 @@
    <widget class="QCheckBox" name="cb_xiaochou">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>181</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -314,7 +323,7 @@
      <rect>
       <x>42</x>
       <y>221</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -334,9 +343,9 @@
    <widget class="QCheckBox" name="cb_juntuan">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>221</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -356,9 +365,9 @@
    <widget class="QCheckBox" name="cb_wenyi">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>221</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -378,9 +387,9 @@
    <widget class="QCheckBox" name="cb_guimian">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>221</y>
-      <width>59</width>
+      <x>340</x>
+      <y>220</y>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -402,7 +411,7 @@
      <rect>
       <x>42</x>
       <y>261</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -422,9 +431,9 @@
    <widget class="QCheckBox" name="cb_guiwushi">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>261</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -444,9 +453,9 @@
    <widget class="QCheckBox" name="cb_qiangshou">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>261</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -466,9 +475,9 @@
    <widget class="QCheckBox" name="cb_sanjiaotou">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>261</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -490,7 +499,7 @@
      <rect>
       <x>41</x>
       <y>301</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -510,9 +519,9 @@
    <widget class="QCheckBox" name="cb_liantiying">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>301</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -532,9 +541,9 @@
    <widget class="QCheckBox" name="cb_gege">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>301</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -554,9 +563,9 @@
    <widget class="QCheckBox" name="cb_zhuizhui">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>301</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -578,7 +587,7 @@
      <rect>
       <x>42</x>
       <y>341</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -598,9 +607,9 @@
    <widget class="QCheckBox" name="cb_niaojie">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>341</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -620,9 +629,9 @@
    <widget class="QCheckBox" name="cb_zhenzi">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>341</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -642,9 +651,9 @@
    <widget class="QCheckBox" name="cb_yingmo">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>341</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -666,7 +675,7 @@
      <rect>
       <x>42</x>
       <y>380</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -686,9 +695,9 @@
    <widget class="QCheckBox" name="cb_eqishi">
     <property name="geometry">
      <rect>
-      <x>110</x>
+      <x>140</x>
       <y>380</y>
-      <width>59</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -700,7 +709,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>7000000</width>
       <height>30</height>
      </size>
     </property>
@@ -748,7 +757,7 @@
      <rect>
       <x>20</x>
       <y>70</y>
-      <width>331</width>
+      <width>401</width>
       <height>16</height>
      </rect>
     </property>
@@ -759,8 +768,8 @@
    <widget class="QPushButton" name="pb_save">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>480</y>
+      <x>320</x>
+      <y>500</y>
       <width>75</width>
       <height>23</height>
      </rect>
@@ -775,9 +784,9 @@
    <widget class="QCheckBox" name="cb_zhuzhu">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>181</y>
-      <width>65</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -789,7 +798,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>65</width>
+      <width>16777215</width>
       <height>16777215</height>
      </size>
     </property>
@@ -803,9 +812,9 @@
    <widget class="QCheckBox" name="cb_baigu">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>240</x>
       <y>380</y>
-      <width>70</width>
+      <width>100</width>
       <height>16</height>
      </rect>
     </property>
@@ -817,7 +826,7 @@
     </property>
     <property name="maximumSize">
      <size>
-      <width>70</width>
+      <width>16777215</width>
       <height>30</height>
      </size>
     </property>
@@ -831,9 +840,9 @@
    <widget class="QCheckBox" name="cb_jidian">
     <property name="geometry">
      <rect>
-      <x>250</x>
+      <x>340</x>
       <y>380</y>
-      <width>59</width>
+      <width>90</width>
       <height>16</height>
      </rect>
     </property>
@@ -845,6 +854,50 @@
     </property>
     <property name="text">
      <string>奇  点</string>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cb_yixing">
+    <property name="geometry">
+     <rect>
+      <x>42</x>
+      <y>420</y>
+      <width>100</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>异  形</string>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cb_qiaji">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>420</y>
+      <width>100</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="text">
+     <string>好孩子</string>
     </property>
     <property name="checked">
      <bool>false</bool>
