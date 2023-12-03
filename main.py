@@ -7,13 +7,13 @@ import webbrowser
 import pyautogui as py
 import win32api
 import requests, re
+from configobj import ConfigObj
+from configparser import ConfigParser
 import win32gui
 import jsonlines
 import pytesseract
 import psutil
-import json
 import win32con
-import PyQt5.QtCore as qc
 from PIL import Image
 from keyboard_operation import key_down, key_up
 from operator import lt, eq, gt, ge, ne, floordiv, mod
@@ -22,10 +22,8 @@ from win32api import MessageBox
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QTranslator, QLocale, Qt
-# from PyQt5.QtGui import QGuiApplication
 from DBDAutoScriptUI import Ui_MainWindow
 from selec_killerUI import Ui_Dialog
-from AdvancedParameterUI import Ui_AdvancedWindow
 
 class Coord:
     def __init__(self, x1_coor, y1_coor, x2_coor=0, y2_coor=0):
@@ -53,12 +51,14 @@ class Coord:
 
 def begin():
     save_cfg()
+    cfg.read(CFG_PATH, encoding='utf-8')
     # begin = multiprocessing.Process(target=AFK)
     # begin.daemon = True
     begingame.start()
     autospace.start()
     # 如果开启提醒，则开启线程
-    if eq(settings.value("CPCI/rb_survivor"), True) and eq(settings.value("CPCI/cb_survivor_do"), True):
+    if (eq(cfg.getboolean("CPCI", "rb_survivor"), True)
+            and eq(cfg.getboolean("CPCI", "cb_survivor_do"), True)):
         tip.start()
 
 
@@ -73,7 +73,6 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.main_ui = Ui_MainWindow()
         self.sel_dialog = SelectWindow()
-        self.advanced_ui = AdvancedWindow()
         self.trans = QTranslator()
         qss_style = '''
             QPushButton:hover {
@@ -117,7 +116,6 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.setupUi(self)
         # self.main_ui.sb_input_count.setMaximum(30)
         self.main_ui.pb_select_cfg.clicked.connect(self.pb_select_cfg_click)
-        self.main_ui.pb_advanced.clicked.connect(self.pb_advanced_click)
         # self.main_ui.cb_rotate_solo.clicked.connect(self.cb_rotate_solo_click)
         # self.main_ui.cb_rotate_order.clicked.connect(self.cb_rotate_order_click)
         # self.main_ui.cb_select_killer.clicked.connect(self.cb_select_killer_click)
@@ -132,11 +130,11 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         # lw.SetDict(0, "DbdKillerNames.txt")  # 设置字库
         # 判断游戏是否运行
         print(hwnd)
-        if eq(hwnd, 0) and settings.value("UPDATE/rb_chinese"):
+        if eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_chinese"):
             win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示",
                                 win32con.MB_OK | win32con.MB_ICONWARNING)
             sys.exit()
-        elif eq(hwnd, 0) and settings.value("UPDATE/rb_english"):
+        elif eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_english"):
             win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
                                 win32con.MB_OK | win32con.MB_ICONWARNING)
             sys.exit()
@@ -152,9 +150,6 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
     def pb_select_cfg_click(self):
         self.sel_dialog.select_ui.retranslateUi(self)
         self.sel_dialog.exec()
-
-    def pb_advanced_click(self):
-        self.advanced_ui.exec()
 
     def rb_chinese_change(self):
         # 默认的中文包，不要新建
@@ -282,12 +277,7 @@ class SelectWindow(QDialog, Ui_Dialog):
 
     def pb_save_click(self):
         save_cfg()
-
-class AdvancedWindow(QDialog, Ui_AdvancedWindow):
-    def __init__(self):
-        super().__init__()
-        self.advanced_ui = Ui_AdvancedWindow()
-        self.advanced_ui.setupUi(self)
+        cfg.read(CFG_PATH, encoding='utf-8')
 
 
 class CustomSelectKiller:
@@ -298,12 +288,12 @@ class CustomSelectKiller:
         self.select_killer_lst = []
         self.match_select_killer_lst = []
         # 随版本更改
-        if settings.value("UPDATE/rb_chinese"):
+        if cfg.getboolean("UPDATE", "rb_chinese"):
             self.all_killer_name = self_defined_parameter['all_killer_name_CN']
             self.SEARCH_PATH = SEARCH_PATH_CN
             self.sign_1 = "好孩子"
             self.sign_2 = "商城"
-        elif settings.value("UPDATE/rb_english"):
+        elif cfg.getboolean("UPDATE", "rb_english"):
             self.SEARCH_PATH = SEARCH_PATH_EN
             self.all_killer_name = self_defined_parameter['all_killer_name_EN']
             self.sign_1 = "GOOD GUY"
@@ -334,9 +324,9 @@ class CustomSelectKiller:
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
                 win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if settings.value("UPDATE/rb_chinese"):
+                if cfg.getboolean("UPDATE", "rb_chinese"):
                     MessageBox(0, "角色检索已完成", "提醒", win32con.MB_ICONASTERISK)
-                elif settings.value("UPDATE/rb_english"):
+                elif cfg.getboolean("UPDATE", "rb_english"):
                     MessageBox(0, "Character search completed", "Tips", win32con.MB_ICONASTERISK)
                 with open(self.SEARCH_PATH, "w", encoding='UTF-8') as search_file:
                     search_file.write("\n".join(self.killer_name_array))
@@ -361,9 +351,9 @@ class CustomSelectKiller:
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
                 win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if settings.value("UPDATE/rb_chinese"):
+                if cfg.getboolean("UPDATE", "rb_chinese"):
                     MessageBox(0, "角色检索已完成", "提醒", win32con.MB_ICONASTERISK)
-                elif settings.value("UPDATE/rb_english"):
+                elif cfg.getboolean("UPDATE", "rb_english"):
                     MessageBox(0, "Character search completed", "Tips", win32con.MB_ICONASTERISK)
                 with open(self.SEARCH_PATH, "w", encoding='UTF-8') as search_file:
                     search_file.write("\n".join(self.killer_name_array))
@@ -377,9 +367,9 @@ class CustomSelectKiller:
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
                 win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
                                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if settings.value("UPDATE/rb_chinese"):
+                if cfg.getboolean("UPDATE", "rb_chinese"):
                     MessageBox(0, "检索未完成，请检查以下：\n" + str(self.killer_name_array) + "\n有错误或乱码请重新检索", "提醒", win32con.MB_ICONASTERISK)
-                elif settings.value("UPDATE/rb_english"):
+                elif cfg.getboolean("UPDATE", "rb_english"):
                     MessageBox(0, "Search not completed, please check the following:\n" + str(self.killer_name_array) + "\nIf there is an error or garbled code, please re-search", "Tips", win32con.MB_ICONASTERISK)
                 with open(self.SEARCH_PATH, "w") as search_file:
                     search_file.write("\n".join(self.killer_name_array))
@@ -484,144 +474,144 @@ class CustomSelectKiller:
 
     def select_killer_name_CN(self):
         # 随版本更改
-        if settings.value("CUSSEC/cb_jiage"):
+        if cfg.getboolean("CUSSEC", "cb_jiage"):
             self.select_killer_lst.append("设陷者")
-        if settings.value("CUSSEC/cb_dingdang"):
+        if cfg.getboolean("CUSSEC", "cb_dingdang"):
             self.select_killer_lst.append("幽灵")
-        if settings.value("CUSSEC/cb_dianjv"):
+        if cfg.getboolean("CUSSEC", "cb_dianjv"):
             self.select_killer_lst.append("农场主")
-        if settings.value("CUSSEC/cb_hushi"):
+        if cfg.getboolean("CUSSEC", "cb_hushi"):
             self.select_killer_lst.append("护士")
-        if settings.value("CUSSEC/cb_tuzi"):
+        if cfg.getboolean("CUSSEC", "cb_tuzi"):
             self.select_killer_lst.append("女猎手")
-        if settings.value("CUSSEC/cb_maishu"):
+        if cfg.getboolean("CUSSEC", "cb_maishu"):
             self.select_killer_lst.append("迈克尔迈尔斯")
-        if settings.value("CUSSEC/cb_linainai"):
+        if cfg.getboolean("CUSSEC", "cb_linainai"):
             self.select_killer_lst.append("妖巫")
-        if settings.value("CUSSEC/cb_laoyang"):
+        if cfg.getboolean("CUSSEC", "cb_laoyang"):
             self.select_killer_lst.append("医生")
-        if settings.value("CUSSEC/cb_babu"):
+        if cfg.getboolean("CUSSEC", "cb_babu"):
             self.select_killer_lst.append("食人魔")
-        if settings.value("CUSSEC/cb_fulaidi"):
+        if cfg.getboolean("CUSSEC", "cb_fulaidi"):
             self.select_killer_lst.append("梦魇")
-        if settings.value("CUSSEC/cb_zhuzhu"):
+        if cfg.getboolean("CUSSEC", "cb_zhuzhu"):
             self.select_killer_lst.append("门徒")
-        if settings.value("CUSSEC/cb_xiaochou"):
+        if cfg.getboolean("CUSSEC", "cb_xiaochou"):
             self.select_killer_lst.append("小丑")
-        if settings.value("CUSSEC/cb_lingmei"):
+        if cfg.getboolean("CUSSEC", "cb_lingmei"):
             self.select_killer_lst.append("怨灵")
-        if settings.value("CUSSEC/cb_juntuan"):
+        if cfg.getboolean("CUSSEC", "cb_juntuan"):
             self.select_killer_lst.append("军团")
-        if settings.value("CUSSEC/cb_wenyi"):
+        if cfg.getboolean("CUSSEC", "cb_wenyi"):
             self.select_killer_lst.append("瘟疫")
-        if settings.value("CUSSEC/cb_guimian"):
+        if cfg.getboolean("CUSSEC", "cb_guimian"):
             self.select_killer_lst.append("鬼面")
-        if settings.value("CUSSEC/cb_mowang"):
+        if cfg.getboolean("CUSSEC", "cb_mowang"):
             self.select_killer_lst.append("魔王")
-        if settings.value("CUSSEC/cb_guiwushi"):
+        if cfg.getboolean("CUSSEC", "cb_guiwushi"):
             self.select_killer_lst.append("鬼武士")
-        if settings.value("CUSSEC/cb_qiangshou"):
+        if cfg.getboolean("CUSSEC", "cb_qiangshou"):
             self.select_killer_lst.append("死亡枪手")
-        if settings.value("CUSSEC/cb_sanjiaotou"):
+        if cfg.getboolean("CUSSEC", "cb_sanjiaotou"):
             self.select_killer_lst.append("处刑者")
-        if settings.value("CUSSEC/cb_kumo"):
+        if cfg.getboolean("CUSSEC", "cb_kumo"):
             self.select_killer_lst.append("枯萎者")
-        if settings.value("CUSSEC/cb_liantiying"):
+        if cfg.getboolean("CUSSEC", "cb_liantiying"):
             self.select_killer_lst.append("连体婴")
-        if settings.value("CUSSEC/cb_gege"):
+        if cfg.getboolean("CUSSEC", "cb_gege"):
             self.select_killer_lst.append("骗术师")
-        if settings.value("CUSSEC/cb_zhuizhui"):
+        if cfg.getboolean("CUSSEC", "cb_zhuizhui"):
             self.select_killer_lst.append("NEMESIS")
-        if settings.value("CUSSEC/cb_dingzitou"):
+        if cfg.getboolean("CUSSEC", "cb_dingzitou"):
             self.select_killer_lst.append("地狱修士")
-        if settings.value("CUSSEC/cb_niaojie"):
+        if cfg.getboolean("CUSSEC", "cb_niaojie"):
             self.select_killer_lst.append("艺术家")
-        if settings.value("CUSSEC/cb_zhenzi"):
+        if cfg.getboolean("CUSSEC", "cb_zhenzi"):
             self.select_killer_lst.append("贞子")
-        if settings.value("CUSSEC/cb_yingmo"):
+        if cfg.getboolean("CUSSEC", "cb_yingmo"):
             self.select_killer_lst.append("影魔")
-        if settings.value("CUSSEC/cb_weishu"):
+        if cfg.getboolean("CUSSEC", "cb_weishu"):
             self.select_killer_lst.append("操纵者")
-        if settings.value("CUSSEC/cb_eqishi"):
+        if cfg.getboolean("CUSSEC", "cb_eqishi"):
             self.select_killer_lst.append("恶骑士")
-        if settings.value("CUSSEC/cb_baigu"):
+        if cfg.getboolean("CUSSEC", "cb_baigu"):
             self.select_killer_lst.append("白骨商人")
-        if settings.value("CUSSEC/cb_jidian"):
+        if cfg.getboolean("CUSSEC", "cb_jidian"):
             self.select_killer_lst.append("奇点")
-        if settings.value("CUSSEC/cb_yixing"):
+        if cfg.getboolean("CUSSEC", "cb_yixing"):
             self.select_killer_lst.append("异形")
-        if settings.value("CUSSEC/cb_qiaji"):
+        if cfg.getboolean("CUSSEC", "cb_qiaji"):
             self.select_killer_lst.append("好孩子")
 
     def select_killer_name_EN(self):
         # 随版本更改
-        if settings.value("CUSSEC/cb_jiage"):
+        if cfg.getboolean("CUSSEC", "cb_jiage"):
             self.select_killer_lst.append("TRAPPER")
-        if settings.value("CUSSEC/cb_dingdang"):
+        if cfg.getboolean("CUSSEC", "cb_dingdang"):
             self.select_killer_lst.append("WRAITH")
-        if settings.value("CUSSEC/cb_dianjv"):
+        if cfg.getboolean("CUSSEC", "cb_dianjv"):
             self.select_killer_lst.append("HILLBILLY")
-        if settings.value("CUSSEC/cb_hushi"):
+        if cfg.getboolean("CUSSEC", "cb_hushi"):
             self.select_killer_lst.append("NURSE")
-        if settings.value("CUSSEC/cb_tuzi"):
+        if cfg.getboolean("CUSSEC", "cb_tuzi"):
             self.select_killer_lst.append("HUNTRESS")
-        if settings.value("CUSSEC/cb_maishu"):
+        if cfg.getboolean("CUSSEC", "cb_maishu"):
             self.select_killer_lst.append("SHAPE")
-        if settings.value("CUSSEC/cb_linainai"):
+        if cfg.getboolean("CUSSEC", "cb_linainai"):
             self.select_killer_lst.append("HAG")
-        if settings.value("CUSSEC/cb_laoyang"):
+        if cfg.getboolean("CUSSEC", "cb_laoyang"):
             self.select_killer_lst.append("DOCTOR")
-        if settings.value("CUSSEC/cb_babu"):
+        if cfg.getboolean("CUSSEC", "cb_babu"):
             self.select_killer_lst.append("CANNIBAL")
-        if settings.value("CUSSEC/cb_fulaidi"):
+        if cfg.getboolean("CUSSEC", "cb_fulaidi"):
             self.select_killer_lst.append("NIGHTMARE")
-        if settings.value("CUSSEC/cb_zhuzhu"):
+        if cfg.getboolean("CUSSEC", "cb_zhuzhu"):
             self.select_killer_lst.append("PIG")
-        if settings.value("CUSSEC/cb_xiaochou"):
+        if cfg.getboolean("CUSSEC", "cb_xiaochou"):
             self.select_killer_lst.append("CLOWN")
-        if settings.value("CUSSEC/cb_lingmei"):
+        if cfg.getboolean("CUSSEC", "cb_lingmei"):
             self.select_killer_lst.append("SPIRIT")
-        if settings.value("CUSSEC/cb_juntuan"):
+        if cfg.getboolean("CUSSEC", "cb_juntuan"):
             self.select_killer_lst.append("LEGION")
-        if settings.value("CUSSEC/cb_wenyi"):
+        if cfg.getboolean("CUSSEC", "cb_wenyi"):
             self.select_killer_lst.append("PLAGUE")
-        if settings.value("CUSSEC/cb_guimian"):
+        if cfg.getboolean("CUSSEC", "cb_guimian"):
             self.select_killer_lst.append("GHOST FACE")
-        if settings.value("CUSSEC/cb_mowang"):
+        if cfg.getboolean("CUSSEC", "cb_mowang"):
             self.select_killer_lst.append("DEMOGORGON")
-        if settings.value("CUSSEC/cb_guiwushi"):
+        if cfg.getboolean("CUSSEC", "cb_guiwushi"):
             self.select_killer_lst.append("ONI")
-        if settings.value("CUSSEC/cb_qiangshou"):
+        if cfg.getboolean("CUSSEC", "cb_qiangshou"):
             self.select_killer_lst.append("DEATHSLINGER")
-        if settings.value("CUSSEC/cb_sanjiaotou"):
+        if cfg.getboolean("CUSSEC", "cb_sanjiaotou"):
             self.select_killer_lst.append("EXECUTIONER")
-        if settings.value("CUSSEC/cb_kumo"):
+        if cfg.getboolean("CUSSEC", "cb_kumo"):
             self.select_killer_lst.append("BLIGHT")
-        if settings.value("CUSSEC/cb_liantiying"):
+        if cfg.getboolean("CUSSEC", "cb_liantiying"):
             self.select_killer_lst.append("TWINS")
-        if settings.value("CUSSEC/cb_gege"):
+        if cfg.getboolean("CUSSEC", "cb_gege"):
             self.select_killer_lst.append("TRICKSTER")
-        if settings.value("CUSSEC/cb_zhuizhui"):
+        if cfg.getboolean("CUSSEC", "cb_zhuizhui"):
             self.select_killer_lst.append("NEMESIS")
-        if settings.value("CUSSEC/cb_dingzitou"):
+        if cfg.getboolean("CUSSEC", "cb_dingzitou"):
             self.select_killer_lst.append("CENOBITE")
-        if settings.value("CUSSEC/cb_niaojie"):
+        if cfg.getboolean("CUSSEC", "cb_niaojie"):
             self.select_killer_lst.append("ARTIST")
-        if settings.value("CUSSEC/cb_zhenzi"):
+        if cfg.getboolean("CUSSEC", "cb_zhenzi"):
             self.select_killer_lst.append("ONRY6")
-        if settings.value("CUSSEC/cb_yingmo"):
+        if cfg.getboolean("CUSSEC", "cb_yingmo"):
             self.select_killer_lst.append("DREDGE")
-        if settings.value("CUSSEC/cb_weishu"):
+        if cfg.getboolean("CUSSEC", "cb_weishu"):
             self.select_killer_lst.append("MASTERMIND")
-        if settings.value("CUSSEC/cb_eqishi"):
+        if cfg.getboolean("CUSSEC", "cb_eqishi"):
             self.select_killer_lst.append("KNIGHT")
-        if settings.value("CUSSEC/cb_baigu"):
+        if cfg.getboolean("CUSSEC", "cb_baigu"):
             self.select_killer_lst.append("SKULL MERCHANT")
-        if settings.value("CUSSEC/cb_jidian"):
+        if cfg.getboolean("CUSSEC", "cb_jidian"):
             self.select_killer_lst.append("SINGULARITY")
-        if settings.value("CUSSEC/cb_yixing"):
+        if cfg.getboolean("CUSSEC", "cb_yixing"):
             self.select_killer_lst.append("XENOMORPH")
-        if settings.value("CUSSEC/cb_qiaji"):
+        if cfg.getboolean("CUSSEC", "cb_qiaji"):
             self.select_killer_lst.append("GOOD GUY")
 
     def match_select_killer_name(self):
@@ -639,53 +629,58 @@ def initialize():
     """ 程序初始化 """
     global self_defined_parameter
     if not os.path.exists(CFG_PATH):
-        with open(CFG_PATH, 'w') as configfile:
+        with open(CFG_PATH, 'w', encoding='UTF-8') as configfile:
             configfile.write("")
+
         # 随版本更改
-        settings.setValue("CPCI/rb_survivor", False)
-        settings.setValue("CPCI/cb_survivor_do", False)
-        settings.setValue("CPCI/rb_killer", False)
-        settings.setValue("CPCI/cb_killer_do", False)
-        settings.setValue("CPCI/rb_fixed_mode", False)
-        settings.setValue("CPCI/rb_random_mode", False)
-        # settings.setValue("CPCI/rb_no_action", False)
-        settings.setValue("UPDATE/cb_autocheck", True)
-        settings.setValue("UPDATE/rb_chinese", True)
-        settings.setValue("UPDATE/rb_english", False)
-        settings.setValue("CUSSEC/cb_jiage", False)
-        settings.setValue("CUSSEC/cb_dingdang", False)
-        settings.setValue("CUSSEC/cb_dianjv", False)
-        settings.setValue("CUSSEC/cb_hushi", False)
-        settings.setValue("CUSSEC/cb_tuzi", False)
-        settings.setValue("CUSSEC/cb_maishu", False)
-        settings.setValue("CUSSEC/cb_linainai", False)
-        settings.setValue("CUSSEC/cb_laoyang", False)
-        settings.setValue("CUSSEC/cb_babu", False)
-        settings.setValue("CUSSEC/cb_fulaidi", False)
-        settings.setValue("CUSSEC/cb_zhuzhu", False)
-        settings.setValue("CUSSEC/cb_xiaochou", False)
-        settings.setValue("CUSSEC/cb_lingmei", False)
-        settings.setValue("CUSSEC/cb_juntuan", False)
-        settings.setValue("CUSSEC/cb_wenyi", False)
-        settings.setValue("CUSSEC/cb_guimian", False)
-        settings.setValue("CUSSEC/cb_mowang", False)
-        settings.setValue("CUSSEC/cb_guiwushi", False)
-        settings.setValue("CUSSEC/cb_qiangshou", False)
-        settings.setValue("CUSSEC/cb_sanjiaotou", False)
-        settings.setValue("CUSSEC/cb_kumo", False)
-        settings.setValue("CUSSEC/cb_liantiying", False)
-        settings.setValue("CUSSEC/cb_gege", False)
-        settings.setValue("CUSSEC/cb_zhuizhui", False)
-        settings.setValue("CUSSEC/cb_dingzitou", False)
-        settings.setValue("CUSSEC/cb_niaojie", False)
-        settings.setValue("CUSSEC/cb_zhenzi", False)
-        settings.setValue("CUSSEC/cb_yingmo", False)
-        settings.setValue("CUSSEC/cb_weishu", False)
-        settings.setValue("CUSSEC/cb_eqishi", False)
-        settings.setValue("CUSSEC/cb_baigu", False)
-        settings.setValue("CUSSEC/cb_jidian", False)
-        settings.setValue("CUSSEC/cb_yixing", False)
-        settings.setValue("CUSSEC/cb_qiaji", False)
+        settings["CPCI"] = {}
+        settings["CPCI"]["rb_survivor"] = False
+        settings["CPCI"]["cb_survivor_do"] = False
+        settings["CPCI"]["rb_killer"] = False
+        settings["CPCI"]["cb_killer_do"] = False
+        settings["CPCI"]["rb_fixed_mode"] = False
+        settings["CPCI"]["rb_random_mode"] = False
+        settings["UPDATE"] = {}
+        settings["UPDATE"]["cb_autocheck"] = True
+        settings["UPDATE"]["rb_chinese"] = True
+        settings["UPDATE"]["rb_english"] = False
+        settings["CUSSEC"] = {}
+        settings["CUSSEC"]["cb_jiage"] = False
+        settings["CUSSEC"]["cb_dingdang"] = False
+        settings["CUSSEC"]["cb_dianjv"] = False
+        settings["CUSSEC"]["cb_hushi"] = False
+        settings["CUSSEC"]["cb_tuzi"] = False
+        settings["CUSSEC"]["cb_maishu"] = False
+        settings["CUSSEC"]["cb_linainai"] = False
+        settings["CUSSEC"]["cb_laoyang"] = False
+        settings["CUSSEC"]["cb_babu"] = False
+        settings["CUSSEC"]["cb_fulaidi"] = False
+        settings["CUSSEC"]["cb_zhuzhu"] = False
+        settings["CUSSEC"]["cb_xiaochou"] = False
+        settings["CUSSEC"]["cb_lingmei"] = False
+        settings["CUSSEC"]["cb_juntuan"] = False
+        settings["CUSSEC"]["cb_wenyi"] = False
+        settings["CUSSEC"]["cb_guimian"] = False
+        settings["CUSSEC"]["cb_mowang"] = False
+        settings["CUSSEC"]["cb_guiwushi"] = False
+        settings["CUSSEC"]["cb_qiangshou"] = False
+        settings["CUSSEC"]["cb_sanjiaotou"] = False
+        settings["CUSSEC"]["cb_kumo"] = False
+        settings["CUSSEC"]["cb_liantiying"] = False
+        settings["CUSSEC"]["cb_gege"] = False
+        settings["CUSSEC"]["cb_zhuizhui"] = False
+        settings["CUSSEC"]["cb_dingzitou"] = False
+        settings["CUSSEC"]["cb_niaojie"] = False
+        settings["CUSSEC"]["cb_zhenzi"] = False
+        settings["CUSSEC"]["cb_yingmo"] = False
+        settings["CUSSEC"]["cb_weishu"] = False
+        settings["CUSSEC"]["cb_eqishi"] = False
+        settings["CUSSEC"]["cb_baigu"] = False
+        settings["CUSSEC"]["cb_jidian"] = False
+        settings["CUSSEC"]["cb_yixing"] = False
+        settings["CUSSEC"]["cb_qiaji"] = False
+
+        settings.write()
 
     if not os.path.exists(SDPARAMETER_PATH):
         with jsonlines.open(SDPARAMETER_PATH, mode='w') as writer:
@@ -695,113 +690,111 @@ def initialize():
 def save_cfg():
     """ 保存配置文件 """
     # 随版本更改
-    settings.setValue("CPCI/rb_survivor", dbd_window.main_ui.rb_survivor.isChecked())
-    settings.setValue("CPCI/cb_survivor_do", dbd_window.main_ui.cb_survivor_do.isChecked())
-    settings.setValue("CPCI/rb_killer", dbd_window.main_ui.rb_killer.isChecked())
-    settings.setValue("CPCI/cb_killer_do", dbd_window.main_ui.cb_killer_do.isChecked())
-    settings.setValue("CPCI/rb_fixed_mode", dbd_window.main_ui.rb_fixed_mode.isChecked())
-    settings.setValue("CPCI/rb_random_mode", dbd_window.main_ui.rb_random_mode.isChecked())
-    # settings.setValue("CPCI/rb_no_action", dbd_window.main_ui.rb_no_action.isChecked())
-    settings.setValue("UPDATE/cb_autocheck", dbd_window.main_ui.cb_autocheck.isChecked())
-    settings.setValue("UPDATE/rb_chinese", dbd_window.main_ui.rb_chinese.isChecked())
-    settings.setValue("UPDATE/rb_english", dbd_window.main_ui.rb_english.isChecked())
-    settings.setValue("CUSSEC/cb_jiage", dbd_window.sel_dialog.select_ui.cb_jiage.isChecked())
-    settings.setValue("CUSSEC/cb_dingdang", dbd_window.sel_dialog.select_ui.cb_dingdang.isChecked())
-    settings.setValue("CUSSEC/cb_dianjv", dbd_window.sel_dialog.select_ui.cb_dianjv.isChecked())
-    settings.setValue("CUSSEC/cb_hushi", dbd_window.sel_dialog.select_ui.cb_hushi.isChecked())
-    settings.setValue("CUSSEC/cb_tuzi", dbd_window.sel_dialog.select_ui.cb_tuzi.isChecked())
-    settings.setValue("CUSSEC/cb_maishu", dbd_window.sel_dialog.select_ui.cb_maishu.isChecked())
-    settings.setValue("CUSSEC/cb_linainai", dbd_window.sel_dialog.select_ui.cb_linainai.isChecked())
-    settings.setValue("CUSSEC/cb_laoyang", dbd_window.sel_dialog.select_ui.cb_laoyang.isChecked())
-    settings.setValue("CUSSEC/cb_babu", dbd_window.sel_dialog.select_ui.cb_babu.isChecked())
-    settings.setValue("CUSSEC/cb_fulaidi", dbd_window.sel_dialog.select_ui.cb_fulaidi.isChecked())
-    settings.setValue("CUSSEC/cb_zhuzhu", dbd_window.sel_dialog.select_ui.cb_zhuzhu.isChecked())
-    settings.setValue("CUSSEC/cb_xiaochou", dbd_window.sel_dialog.select_ui.cb_xiaochou.isChecked())
-    settings.setValue("CUSSEC/cb_lingmei", dbd_window.sel_dialog.select_ui.cb_lingmei.isChecked())
-    settings.setValue("CUSSEC/cb_juntuan", dbd_window.sel_dialog.select_ui.cb_juntuan.isChecked())
-    settings.setValue("CUSSEC/cb_wenyi", dbd_window.sel_dialog.select_ui.cb_wenyi.isChecked())
-    settings.setValue("CUSSEC/cb_guimian", dbd_window.sel_dialog.select_ui.cb_guimian.isChecked())
-    settings.setValue("CUSSEC/cb_mowang", dbd_window.sel_dialog.select_ui.cb_mowang.isChecked())
-    settings.setValue("CUSSEC/cb_guiwushi", dbd_window.sel_dialog.select_ui.cb_guiwushi.isChecked())
-    settings.setValue("CUSSEC/cb_qiangshou", dbd_window.sel_dialog.select_ui.cb_qiangshou.isChecked())
-    settings.setValue("CUSSEC/cb_sanjiaotou", dbd_window.sel_dialog.select_ui.cb_sanjiaotou.isChecked())
-    settings.setValue("CUSSEC/cb_kumo", dbd_window.sel_dialog.select_ui.cb_kumo.isChecked())
-    settings.setValue("CUSSEC/cb_liantiying", dbd_window.sel_dialog.select_ui.cb_liantiying.isChecked())
-    settings.setValue("CUSSEC/cb_gege", dbd_window.sel_dialog.select_ui.cb_gege.isChecked())
-    settings.setValue("CUSSEC/cb_zhuizhui", dbd_window.sel_dialog.select_ui.cb_zhuizhui.isChecked())
-    settings.setValue("CUSSEC/cb_dingzitou", dbd_window.sel_dialog.select_ui.cb_dingzitou.isChecked())
-    settings.setValue("CUSSEC/cb_niaojie", dbd_window.sel_dialog.select_ui.cb_niaojie.isChecked())
-    settings.setValue("CUSSEC/cb_zhenzi", dbd_window.sel_dialog.select_ui.cb_zhenzi.isChecked())
-    settings.setValue("CUSSEC/cb_yingmo", dbd_window.sel_dialog.select_ui.cb_yingmo.isChecked())
-    settings.setValue("CUSSEC/cb_weishu", dbd_window.sel_dialog.select_ui.cb_weishu.isChecked())
-    settings.setValue("CUSSEC/cb_eqishi", dbd_window.sel_dialog.select_ui.cb_eqishi.isChecked())
-    settings.setValue("CUSSEC/cb_baigu", dbd_window.sel_dialog.select_ui.cb_baigu.isChecked())
-    settings.setValue("CUSSEC/cb_jidian", dbd_window.sel_dialog.select_ui.cb_jidian.isChecked())
-    settings.setValue("CUSSEC/cb_yixing", dbd_window.sel_dialog.select_ui.cb_yixing.isChecked())
-    settings.setValue("CUSSEC/cb_qiaji", dbd_window.sel_dialog.select_ui.cb_qiaji.isChecked())
-
+    settings["CPCI"]["rb_survivor"] = dbd_window.main_ui.rb_survivor.isChecked()
+    settings["CPCI"]["cb_survivor_do"] = dbd_window.main_ui.cb_survivor_do.isChecked()
+    settings["CPCI"]["rb_killer"] = dbd_window.main_ui.rb_killer.isChecked()
+    settings["CPCI"]["cb_killer_do"] = dbd_window.main_ui.cb_killer_do.isChecked()
+    settings["CPCI"]["rb_fixed_mode"] =  dbd_window.main_ui.rb_fixed_mode.isChecked()
+    settings["CPCI"]["rb_random_mode"] = dbd_window.main_ui.rb_random_mode.isChecked()
+    settings["UPDATE"]["cb_autocheck"] = dbd_window.main_ui.cb_autocheck.isChecked()
+    settings["UPDATE"]["rb_chinese"] = dbd_window.main_ui.rb_chinese.isChecked()
+    settings["UPDATE"]["rb_english"] = dbd_window.main_ui.rb_english.isChecked()
+    settings["CUSSEC"]["cb_jiage"] = dbd_window.sel_dialog.select_ui.cb_jiage.isChecked()
+    settings["CUSSEC"]["cb_dingdang"] = dbd_window.sel_dialog.select_ui.cb_dingdang.isChecked()
+    settings["CUSSEC"]["cb_dianjv"] = dbd_window.sel_dialog.select_ui.cb_dianjv.isChecked()
+    settings["CUSSEC"]["cb_hushi"] = dbd_window.sel_dialog.select_ui.cb_hushi.isChecked()
+    settings["CUSSEC"]["cb_tuzi"] = dbd_window.sel_dialog.select_ui.cb_tuzi.isChecked()
+    settings["CUSSEC"]["cb_maishu"] = dbd_window.sel_dialog.select_ui.cb_maishu.isChecked()
+    settings["CUSSEC"]["cb_linainai"] = dbd_window.sel_dialog.select_ui.cb_linainai.isChecked()
+    settings["CUSSEC"]["cb_laoyang"] = dbd_window.sel_dialog.select_ui.cb_laoyang.isChecked()
+    settings["CUSSEC"]["cb_babu"] = dbd_window.sel_dialog.select_ui.cb_babu.isChecked()
+    settings["CUSSEC"]["cb_fulaidi"] = dbd_window.sel_dialog.select_ui.cb_fulaidi.isChecked()
+    settings["CUSSEC"]["cb_zhuzhu"] = dbd_window.sel_dialog.select_ui.cb_zhuzhu.isChecked()
+    settings["CUSSEC"]["cb_xiaochou"] = dbd_window.sel_dialog.select_ui.cb_xiaochou.isChecked()
+    settings["CUSSEC"]["cb_lingmei"] = dbd_window.sel_dialog.select_ui.cb_lingmei.isChecked()
+    settings["CUSSEC"]["cb_juntuan"] = dbd_window.sel_dialog.select_ui.cb_juntuan.isChecked()
+    settings["CUSSEC"]["cb_wenyi"] = dbd_window.sel_dialog.select_ui.cb_wenyi.isChecked()
+    settings["CUSSEC"]["cb_guimian"] = dbd_window.sel_dialog.select_ui.cb_guimian.isChecked()
+    settings["CUSSEC"]["cb_mowang"] = dbd_window.sel_dialog.select_ui.cb_mowang.isChecked()
+    settings["CUSSEC"]["cb_guiwushi"] = dbd_window.sel_dialog.select_ui.cb_guiwushi.isChecked()
+    settings["CUSSEC"]["cb_qiangshou"] = dbd_window.sel_dialog.select_ui.cb_qiangshou.isChecked()
+    settings["CUSSEC"]["cb_sanjiaotou"] = dbd_window.sel_dialog.select_ui.cb_sanjiaotou.isChecked()
+    settings["CUSSEC"]["cb_kumo"] = dbd_window.sel_dialog.select_ui.cb_kumo.isChecked()
+    settings["CUSSEC"]["cb_liantiying"] = dbd_window.sel_dialog.select_ui.cb_liantiying.isChecked()
+    settings["CUSSEC"]["cb_gege"] = dbd_window.sel_dialog.select_ui.cb_gege.isChecked()
+    settings["CUSSEC"]["cb_zhuizhui"] = dbd_window.sel_dialog.select_ui.cb_zhuizhui.isChecked()
+    settings["CUSSEC"]["cb_dingzitou"] = dbd_window.sel_dialog.select_ui.cb_dingzitou.isChecked()
+    settings["CUSSEC"]["cb_niaojie"] = dbd_window.sel_dialog.select_ui.cb_niaojie.isChecked()
+    settings["CUSSEC"]["cb_zhenzi"] = dbd_window.sel_dialog.select_ui.cb_zhenzi.isChecked()
+    settings["CUSSEC"]["cb_yingmo"] = dbd_window.sel_dialog.select_ui.cb_yingmo.isChecked()
+    settings["CUSSEC"]["cb_weishu"] = dbd_window.sel_dialog.select_ui.cb_weishu.isChecked()
+    settings["CUSSEC"]["cb_eqishi"] = dbd_window.sel_dialog.select_ui.cb_eqishi.isChecked()
+    settings["CUSSEC"]["cb_baigu"] = dbd_window.sel_dialog.select_ui.cb_baigu.isChecked()
+    settings["CUSSEC"]["cb_jidian"] = dbd_window.sel_dialog.select_ui.cb_jidian.isChecked()
+    settings["CUSSEC"]["cb_yixing"] = dbd_window.sel_dialog.select_ui.cb_yixing.isChecked()
+    settings["CUSSEC"]["cb_qiaji"] = dbd_window.sel_dialog.select_ui.cb_qiaji.isChecked()
+    settings.write()
 def read_cfg():
     """读取配置文件"""
     global self_defined_parameter
     # 随版本更改
-    dbd_window.main_ui.rb_survivor.setChecked(json.loads(settings.value("CPCI/rb_survivor")))
-    dbd_window.main_ui.cb_survivor_do.setChecked(json.loads(settings.value("CPCI/cb_survivor_do")))
-    dbd_window.main_ui.rb_killer.setChecked(json.loads(settings.value("CPCI/rb_killer")))
-    dbd_window.main_ui.cb_killer_do.setChecked(json.loads(settings.value("CPCI/cb_killer_do")))
-    dbd_window.main_ui.rb_fixed_mode.setChecked(json.loads(settings.value("CPCI/rb_fixed_mode")))
-    dbd_window.main_ui.rb_random_mode.setChecked(json.loads(settings.value("CPCI/rb_random_mode")))
-    # dbd_window.main_ui.rb_no_action.setChecked(json.loads(settings.value("CPCI/rb_no_action")))
-    dbd_window.main_ui.cb_autocheck.setChecked(json.loads(settings.value("UPDATE/cb_autocheck")))
-    dbd_window.main_ui.rb_chinese.setChecked(json.loads(settings.value("UPDATE/rb_chinese")))
-    dbd_window.main_ui.rb_english.setChecked(json.loads(settings.value("UPDATE/rb_english")))
-    dbd_window.sel_dialog.select_ui.cb_jiage.setChecked(json.loads(settings.value("CUSSEC/cb_jiage")))
-    dbd_window.sel_dialog.select_ui.cb_dingdang.setChecked(json.loads(settings.value("CUSSEC/cb_dingdang")))
-    dbd_window.sel_dialog.select_ui.cb_dianjv.setChecked(json.loads(settings.value("CUSSEC/cb_dianjv")))
-    dbd_window.sel_dialog.select_ui.cb_hushi.setChecked(json.loads(settings.value("CUSSEC/cb_hushi")))
-    dbd_window.sel_dialog.select_ui.cb_tuzi.setChecked(json.loads(settings.value("CUSSEC/cb_tuzi")))
-    dbd_window.sel_dialog.select_ui.cb_maishu.setChecked(json.loads(settings.value("CUSSEC/cb_maishu")))
-    dbd_window.sel_dialog.select_ui.cb_linainai.setChecked(json.loads(settings.value("CUSSEC/cb_linainai")))
-    dbd_window.sel_dialog.select_ui.cb_laoyang.setChecked(json.loads(settings.value("CUSSEC/cb_laoyang")))
-    dbd_window.sel_dialog.select_ui.cb_babu.setChecked(json.loads(settings.value("CUSSEC/cb_babu")))
-    dbd_window.sel_dialog.select_ui.cb_fulaidi.setChecked(json.loads(settings.value("CUSSEC/cb_fulaidi")))
-    dbd_window.sel_dialog.select_ui.cb_zhuzhu.setChecked(json.loads(settings.value("CUSSEC/cb_zhuzhu")))
-    dbd_window.sel_dialog.select_ui.cb_xiaochou.setChecked(json.loads(settings.value("CUSSEC/cb_xiaochou")))
-    dbd_window.sel_dialog.select_ui.cb_lingmei.setChecked(json.loads(settings.value("CUSSEC/cb_lingmei")))
-    dbd_window.sel_dialog.select_ui.cb_juntuan.setChecked(json.loads(settings.value("CUSSEC/cb_juntuan")))
-    dbd_window.sel_dialog.select_ui.cb_wenyi.setChecked(json.loads(settings.value("CUSSEC/cb_wenyi")))
-    dbd_window.sel_dialog.select_ui.cb_guimian.setChecked(json.loads(settings.value("CUSSEC/cb_guimian")))
-    dbd_window.sel_dialog.select_ui.cb_mowang.setChecked(json.loads(settings.value("CUSSEC/cb_mowang")))
-    dbd_window.sel_dialog.select_ui.cb_guiwushi.setChecked(json.loads(settings.value("CUSSEC/cb_guiwushi")))
-    dbd_window.sel_dialog.select_ui.cb_qiangshou.setChecked(json.loads(settings.value("CUSSEC/cb_qiangshou")))
-    dbd_window.sel_dialog.select_ui.cb_sanjiaotou.setChecked(json.loads(settings.value("CUSSEC/cb_sanjiaotou")))
-    dbd_window.sel_dialog.select_ui.cb_kumo.setChecked(json.loads(settings.value("CUSSEC/cb_kumo")))
-    dbd_window.sel_dialog.select_ui.cb_liantiying.setChecked(json.loads(settings.value("CUSSEC/cb_liantiying")))
-    dbd_window.sel_dialog.select_ui.cb_gege.setChecked(json.loads(settings.value("CUSSEC/cb_gege")))
-    dbd_window.sel_dialog.select_ui.cb_zhuizhui.setChecked(json.loads(settings.value("CUSSEC/cb_zhuizhui")))
-    dbd_window.sel_dialog.select_ui.cb_dingzitou.setChecked(json.loads(settings.value("CUSSEC/cb_dingzitou")))
-    dbd_window.sel_dialog.select_ui.cb_niaojie.setChecked(json.loads(settings.value("CUSSEC/cb_niaojie")))
-    dbd_window.sel_dialog.select_ui.cb_zhenzi.setChecked(json.loads(settings.value("CUSSEC/cb_zhenzi")))
-    dbd_window.sel_dialog.select_ui.cb_yingmo.setChecked(json.loads(settings.value("CUSSEC/cb_yingmo")))
-    dbd_window.sel_dialog.select_ui.cb_weishu.setChecked(json.loads(settings.value("CUSSEC/cb_weishu")))
-    dbd_window.sel_dialog.select_ui.cb_eqishi.setChecked(json.loads(settings.value("CUSSEC/cb_eqishi")))
-    dbd_window.sel_dialog.select_ui.cb_baigu.setChecked(json.loads(settings.value("CUSSEC/cb_baigu")))
-    dbd_window.sel_dialog.select_ui.cb_jidian.setChecked(json.loads(settings.value("CUSSEC/cb_jidian")))
-    dbd_window.sel_dialog.select_ui.cb_yixing.setChecked(json.loads(settings.value("CUSSEC/cb_yixing")))
-    if settings.value("CPCI/rb_survivor") :
+    dbd_window.main_ui.rb_survivor.setChecked(cfg.getboolean("CPCI", "rb_survivor"))
+    dbd_window.main_ui.cb_survivor_do.setChecked(cfg.getboolean("CPCI", "cb_survivor_do"))
+    dbd_window.main_ui.rb_killer.setChecked(cfg.getboolean("CPCI", "rb_killer"))
+    dbd_window.main_ui.cb_killer_do.setChecked(cfg.getboolean("CPCI", "cb_killer_do"))
+    dbd_window.main_ui.rb_fixed_mode.setChecked(cfg.getboolean("CPCI", "rb_fixed_mode"))
+    dbd_window.main_ui.rb_random_mode.setChecked(cfg.getboolean("CPCI", "rb_random_mode"))
+    dbd_window.main_ui.cb_autocheck.setChecked(cfg.getboolean("UPDATE", "cb_autocheck"))
+    dbd_window.main_ui.rb_chinese.setChecked(cfg.getboolean("UPDATE", "rb_chinese"))
+    dbd_window.main_ui.rb_english.setChecked(cfg.getboolean("UPDATE", "rb_english"))
+    dbd_window.sel_dialog.select_ui.cb_jiage.setChecked(cfg.getboolean("CUSSEC", "cb_jiage"))
+    dbd_window.sel_dialog.select_ui.cb_dingdang.setChecked(cfg.getboolean("CUSSEC", "cb_dingdang"))
+    dbd_window.sel_dialog.select_ui.cb_dianjv.setChecked(cfg.getboolean("CUSSEC", "cb_dianjv"))
+    dbd_window.sel_dialog.select_ui.cb_hushi.setChecked(cfg.getboolean("CUSSEC", "cb_hushi"))
+    dbd_window.sel_dialog.select_ui.cb_tuzi.setChecked(cfg.getboolean("CUSSEC", "cb_tuzi"))
+    dbd_window.sel_dialog.select_ui.cb_maishu.setChecked(cfg.getboolean("CUSSEC", "cb_maishu"))
+    dbd_window.sel_dialog.select_ui.cb_linainai.setChecked(cfg.getboolean("CUSSEC", "cb_linainai"))
+    dbd_window.sel_dialog.select_ui.cb_laoyang.setChecked(cfg.getboolean("CUSSEC", "cb_laoyang"))
+    dbd_window.sel_dialog.select_ui.cb_babu.setChecked(cfg.getboolean("CUSSEC", "cb_babu"))
+    dbd_window.sel_dialog.select_ui.cb_fulaidi.setChecked(cfg.getboolean("CUSSEC", "cb_fulaidi"))
+    dbd_window.sel_dialog.select_ui.cb_zhuzhu.setChecked(cfg.getboolean("CUSSEC", "cb_zhuzhu"))
+    dbd_window.sel_dialog.select_ui.cb_xiaochou.setChecked(cfg.getboolean("CUSSEC", "cb_xiaochou"))
+    dbd_window.sel_dialog.select_ui.cb_lingmei.setChecked(cfg.getboolean("CUSSEC", "cb_lingmei"))
+    dbd_window.sel_dialog.select_ui.cb_juntuan.setChecked(cfg.getboolean("CUSSEC", "cb_juntuan"))
+    dbd_window.sel_dialog.select_ui.cb_wenyi.setChecked(cfg.getboolean("CUSSEC", "cb_wenyi"))
+    dbd_window.sel_dialog.select_ui.cb_guimian.setChecked(cfg.getboolean("CUSSEC", "cb_guimian"))
+    dbd_window.sel_dialog.select_ui.cb_mowang.setChecked(cfg.getboolean("CUSSEC", "cb_mowang"))
+    dbd_window.sel_dialog.select_ui.cb_guiwushi.setChecked(cfg.getboolean("CUSSEC", "cb_guiwushi"))
+    dbd_window.sel_dialog.select_ui.cb_qiangshou.setChecked(cfg.getboolean("CUSSEC", "cb_qiangshou"))
+    dbd_window.sel_dialog.select_ui.cb_sanjiaotou.setChecked(cfg.getboolean("CUSSEC", "cb_sanjiaotou"))
+    dbd_window.sel_dialog.select_ui.cb_kumo.setChecked(cfg.getboolean("CUSSEC", "cb_kumo"))
+    dbd_window.sel_dialog.select_ui.cb_liantiying.setChecked(cfg.getboolean("CUSSEC", "cb_liantiying"))
+    dbd_window.sel_dialog.select_ui.cb_gege.setChecked(cfg.getboolean("CUSSEC", "cb_gege"))
+    dbd_window.sel_dialog.select_ui.cb_zhuizhui.setChecked(cfg.getboolean("CUSSEC", "cb_zhuizhui"))
+    dbd_window.sel_dialog.select_ui.cb_dingzitou.setChecked(cfg.getboolean("CUSSEC", "cb_dingzitou"))
+    dbd_window.sel_dialog.select_ui.cb_niaojie.setChecked(cfg.getboolean("CUSSEC", "cb_niaojie"))
+    dbd_window.sel_dialog.select_ui.cb_zhenzi.setChecked(cfg.getboolean("CUSSEC", "cb_zhenzi"))
+    dbd_window.sel_dialog.select_ui.cb_yingmo.setChecked(cfg.getboolean("CUSSEC", "cb_yingmo"))
+    dbd_window.sel_dialog.select_ui.cb_weishu.setChecked(cfg.getboolean("CUSSEC", "cb_weishu"))
+    dbd_window.sel_dialog.select_ui.cb_eqishi.setChecked(cfg.getboolean("CUSSEC", "cb_eqishi"))
+    dbd_window.sel_dialog.select_ui.cb_baigu.setChecked(cfg.getboolean("CUSSEC", "cb_baigu"))
+    dbd_window.sel_dialog.select_ui.cb_jidian.setChecked(cfg.getboolean("CUSSEC",  "cb_jidian"))
+    dbd_window.sel_dialog.select_ui.cb_yixing.setChecked(cfg.getboolean("CUSSEC", "cb_yixing"))
+    if cfg.getboolean("CPCI", "rb_survivor"):
         dbd_window.main_ui.cb_survivor_do.setEnabled(True)
         dbd_window.main_ui.rb_fixed_mode.setDisabled(True)
         dbd_window.main_ui.rb_random_mode.setDisabled(True)
         # dbd_window.main_ui.rb_no_action.setDisabled(True)
         # dbd_window.main_ui.pb_research.setDisabled(True)
         dbd_window.main_ui.pb_select_cfg.setDisabled(True)
-    if settings.value("CPCI/rb_killer"):
+    if cfg.getboolean("CPCI", "rb_killer"):
         dbd_window.main_ui.cb_killer_do.setEnabled(True)
     # if settings.value("CPCI/rb_no_action") == "true":
     #     dbd_window.main_ui.pb_research.setDisabled(True)
     #     dbd_window.main_ui.pb_select_cfg.setDisabled(True)
-    if settings.value("UPDATE/rb_chinese"):
+    if cfg.getboolean("UPDATE", "rb_chinese"):
         dbd_window.main_ui.pb_search.setDisabled(True)
-    if settings.value("UPDATE/rb_english"):
+    if cfg.getboolean("UPDATE", "rb_english"):
         dbd_window.main_ui.lb_message.hide()
 
     with jsonlines.open(SDPARAMETER_PATH, mode='r') as reader:
@@ -831,11 +824,12 @@ def authorization():
     authorization_new = re.search('title>(.*?)<', html_str, re.S).group(1)[21:]
     if ne(authorization_now, authorization_new):
         # confirm = pyautogui.confirm(text=text, title="检查更新", buttons=['OK', 'Cancel'])
-        if settings.value("UPDATE/rb_chinese"):
+        if cfg.getboolean("UPDATE", "rb_chinese"):
             win32api.MessageBox(0, "授权已过期", "授权失败", win32con.MB_OK | win32con.MB_ICONERROR)
             sys.exit(0)
-        elif settings.value("UPDATE/rb_english"):
-            win32api.MessageBox(0, "Authorization expired", "Authorization failed", win32con.MB_OK | win32con.MB_ICONERROR)
+        elif cfg.getboolean("UPDATE", "rb_english"):
+            win32api.MessageBox(0, "Authorization expired", "Authorization failed",
+                                win32con.MB_OK | win32con.MB_ICONERROR)
             sys.exit(0)
 
 
@@ -846,13 +840,13 @@ def update():
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
         # confirm = pyautogui.confirm(text=text, title="检查更新", buttons=['OK', 'Cancel'])
-        if settings.value("UPDATE/rb_chinese"):
+        if cfg.getboolean("UPDATE", "rb_chinese"):
             confirm = win32api.MessageBox(0,
                                       "检查到新版本：{b}\n\n当前的使用版本是：{a}，推荐更新。".format(a=ver_now, b=ver_new)
                                       , "检查更新", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
             if eq(confirm, 6):  # 打开
                 webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
-        elif settings.value("UPDATE/rb_english"):
+        elif cfg.getboolean("UPDATE", "rb_english"):
             confirm = win32api.MessageBox(0,
                                       "New version detected: {b}\n\nThe current version is: {a}, recommended update.".format(a=ver_now, b=ver_new)
                                       , "Check for updates", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
@@ -1154,8 +1148,8 @@ def disconnect_confirm(sum=120):
     result = result.split(' ')
     if ne(len(result), 0):
         confirmX, confirmY = int(result[3]), int(result[4])
-        moveclick(disconnect_check_colorXY.x1_coor+confirmX, disconnect_check_colorXY.y2_coor-confirmY, 1, 1)
-        return True
+        moveclick(disconnect_check_colorXY.x1_coor+confirmX, disconnect_check_colorXY.y2_coor-confirmY,
+                  1, 1)
 # def skill_check():
 #     """skill check in the game
 #     :return: bool
@@ -1209,28 +1203,26 @@ def reconnect():
     # moveclick(563, 722, click_delay=1)  # 错误代码7
     while eq(disconnect_check(), True):
         for sum in range(80, 130, 10):
-            if disconnect_confirm(sum):
+            disconnect_confirm(sum)
+            if eq(disconnect_check(), False):
                 break
-        moveclick(1, 1, click_delay=1)
     # 段位重置
     # if eq(segment_reset(), True):
     #     moveclick(1462, 841)
     # 检测血点，判断断线情况
-    if eq(starthall(), True) or eq(readyhall(), True) or eq(gameover(), True):  # 小退
-        if eq(gameover(), True):  # 意味着不在大厅
-            moveclick(1761, 1009)
-            return True
+    if eq(starthall(), True) or eq(readyhall(), True):# 小退
+        return True
+    elif eq(gameover(), True):  # 意味着不在大厅
+        moveclick(1761, 1009)
+        return True
     else:  # 大退
         main_quit = False
         while main_quit == False:
-            time.sleep(1)
-            py.click()
-            time.sleep(5)
-            if eq(disconnect_check(), True):
+            while eq(disconnect_check(), True):
                 for sum in range(80, 130, 10):
-                    if disconnect_confirm(sum):
+                    disconnect_confirm(sum)
+                    if eq(disconnect_check(), False):
                         break
-                continue
             time.sleep(1)
             # moveclick(1453, 628, click_delay=1)  # 错误
             #### 活动奖励
@@ -1249,13 +1241,12 @@ def reconnect():
             # 是否重进主页面判断
             if eq(mainjudge(), True):
                 # 通过阵营选择判断返回大厅
-                if eq(settings.value("CPCI/rb_survivor"), True):
+                if eq(cfg.getboolean("CPCI", "rb_survivor"), True):
                     moveclick(143, 261)
-                elif eq(settings.value("CPCI/rb_killer"), True):
+                elif eq(cfg.getboolean("CPCI", "rb_killer"), True):
                     moveclick(135, 133)
                 main_quit = True
         return True
-
 
 def random_movement():
     """通过随机数取得移动的方向
@@ -1474,9 +1465,20 @@ def killer_skill():
 
 def killer_action():
     """killer integral action"""
-    ctrl_lst = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人"]
-    need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者"]
-    if eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者"):
+    ctrl_lst_cn = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人", "好孩子"]
+    need_lst_cn = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者", "好孩子"]
+    ctrl_lst_en = ["DOCTOR", "NIGHTMARE", "CLOWN", "DEMOGORGON", "TWINS", "DREDGE", "SKULL MERCHANT", "GOOD GUY"]
+    need_lst_en = ["PIG", "DEMOGORGON", "DEATHSLINGER", "TRICKSTER", "NEMESIS",
+                   "CENOBITE", "ARTIST", "DREDGE", "SINGULARITY", "MASTERMIND", "GOOD GUY"]
+    ctrl_lst = []
+    need_lst = []
+    if cfg.getboolean("UPDATE", "rb_chinese"):
+        ctrl_lst = ctrl_lst_cn
+        need_lst = need_lst_cn
+    elif cfg.getboolean("UPDATE", "rb_english"):
+        ctrl_lst = ctrl_lst_en
+        need_lst = need_lst_en
+    if eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者") or eq(custom_select.select_killer_lst[character_num_b - 1], "BLIGHT"):
         for i in range(5):
             act_move = random_movement()
             key_down(hwnd, act_move)
@@ -1639,11 +1641,11 @@ def back_first():
     # 回到最开始,需要几次就回滚几次
     py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
     py.sleep(0.5)
-    py.scroll(1)
+    py.scroll(1) # 1
     py.sleep(0.5)
-    py.scroll(1)
+    py.scroll(1) # 2
     py.sleep(0.5)
-    py.scroll(1)
+    py.scroll(1) # 3
     moveclick(405, 314, 1.5)
 
 
@@ -1757,28 +1759,28 @@ def character_selection():
 def AFK():
     # hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
     global hwnd, match_stage, ready_stage, end_stage, self_defined_parameter
-    if settings.value("UPDATE/rb_chinese"):
+    if cfg.getboolean("UPDATE", "rb_chinese"):
         custom_select.select_killer_name_CN()
-    elif settings.value("UPDATE/rb_english"):
+    elif cfg.getboolean("UPDATE", "rb_english"):
         custom_select.select_killer_name_EN()
     list_number = len(custom_select.select_killer_lst)
     # 判断游戏是否运行
-    if eq(hwnd, 0) and settings.value("UPDATE/rb_chinese"):
+    if eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_chinese"):
         win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示",
                                 win32con.MB_OK | win32con.MB_ICONWARNING)
         kill()
-    elif eq(hwnd, 0) and settings.value("UPDATE/rb_english"):
+    elif eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_english"):
         win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
                                 win32con.MB_OK | win32con.MB_ICONWARNING)
         kill()
-    if (not custom_select.select_killer_lst and eq(settings.value("CPCI/rb_killer"), True)
-        and eq(settings.value("UPDATE/rb_chinese"), True)):
-        win32api.MessageBox(hwnd, "未选择屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
-        kill()
-    elif (not custom_select.select_killer_lst and eq(settings.value("CPCI/rb_killer"), True)
-        and eq(settings.value("UPDATE/rb_english"), True)):
-        win32api.MessageBox(hwnd, "No killer selected.", "Prompt", win32con.MB_OK | win32con.MB_ICONASTERISK)
-        kill()
+    if not custom_select.select_killer_lst and eq(cfg.getboolean("CPCI", "rb_killer"), True):
+        if cfg.getboolean("UPDATE", "rb_chinese"):
+            win32api.MessageBox(hwnd, "未选择屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
+            kill()
+        elif cfg.getboolean("UPDATE", "rb_english"):
+            win32api.MessageBox(hwnd, "No killer selected.", "Prompt",
+                                win32con.MB_OK | win32con.MB_ICONASTERISK)
+            kill()
     # 检查输入数值是否超过最大角色数量
     # if eq(settings.value("CPCI/rb_survivor"), True) and gt(dbd_window.main_ui.sb_input_count.value(), 32):
     #     win32api.MessageBox(hwnd, "超过角色最大数量。", "错误", win32con.MB_OK | win32con.MB_ICONERROR)
@@ -1822,7 +1824,7 @@ def AFK():
                 #     time.sleep(1)
                 #     character_rotation()
                 # 自动选择屠夫的模式
-                if eq(settings.value("CPCI/rb_killer"), True):
+                if eq(cfg.getboolean("CPCI", "rb_killer"), True):
                     time.sleep(1)
                     # if eq(settings.value("CPCI/rb_no_action"), True):
                     #     list_number = 0
@@ -1831,7 +1833,7 @@ def AFK():
                         list_number = 0
                     elif gt(list_number, 1):
                         character_selection()
-                elif eq(settings.value("CPCI/rb_survivor"), True):
+                elif eq(cfg.getboolean("CPCI", "rb_survivor"), True):
                     time.sleep(1)
                 # 进行准备
                 while eq(starthall(), True):  # debug:False -->test
@@ -1932,7 +1934,8 @@ def AFK():
                         else:
                             continue
                 # 判断是否开启
-                if eq(settings.value("CPCI/cb_killer_do"), True) and eq(settings.value("CPCI/rb_killer"), True):
+                if (eq(cfg.getboolean("CPCI", "cb_killer_do"), True)
+                        and eq(cfg.getboolean("CPCI", "rb_killer"), True)):
                     auto_message()
                 moveclick(1761, 1009, 0.5, 1)  # return hall
                 moveclick(1, 1)
@@ -1947,11 +1950,11 @@ def AFK():
                 #         in_game = True
                 # 从前台获取 阵营数据，再判断行为模式
                 # if eq(in_game, True):
-                if eq(settings.value("CPCI/rb_survivor"), True):
+                if eq(cfg.getboolean("CPCI", "rb_survivor"), True):
                     survivor_action()
-                elif eq(settings.value("CPCI/rb_fixed_mode"), True):
+                elif eq(cfg.getboolean("CPCI", "rb_fixed_mode"), True):
                     killer_fixed_act()
-                elif eq(settings.value("CPCI/rb_random_mode"), True):
+                elif eq(cfg.getboolean("CPCI", "rb_random_mode"), True):
                     killer_action()
                 time.sleep(1)
                 if eq(disconnect_check(), True):
@@ -1966,19 +1969,16 @@ if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     # DBDAS_PATH = os.path.join(BASE_DIR, "DBDAutoScript")
     OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr\\tesseract.exe")
-    CFG_PATH = os.path.join(BASE_DIR, "cfg.ini")
+    CFG_PATH = os.path.join(BASE_DIR, "cfg.cfg")
     SEARCH_PATH_CN = os.path.join(BASE_DIR, "searchfile_cn.txt")
     SEARCH_PATH_EN = os.path.join(BASE_DIR, "searchfile_en.txt")
     SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
-    TRANSLATE_PATH = os.path.join(BASE_DIR, "picture/transEN.qm")
+    TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
     pytesseract.pytesseract.tesseract_cmd = OCR_PATH
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("picture/dbdwindow.png"))
+    app.setWindowIcon(QIcon("picture\\dbdwindow.png"))
     dbd_window = DbdWindow()
-    settings = qc.QSettings(CFG_PATH, qc.QSettings.IniFormat)
-    if QLocale.system().language() != QLocale.Chinese or json.loads(settings.value("UPDATE/rb_english")):
-        dbd_window.rb_english_change()
     # 判断的颜色值。相似度，屠夫列表
     self_defined_parameter = {'killer_number': 34, 'message': 'GG',
                               'all_killer_name_CN': ["设陷者", "幽灵", "农场主", "护士", "女猎手", "迈克尔迈尔斯", "妖巫", "医生",
@@ -1990,8 +1990,13 @@ if __name__ == '__main__':
                                 "DEATHSLINGER", "EXECUTIONER", "BLIGHT", "TWINS", "TRICKSTER", "NEMESIS", "CENOBITE", "ARTIST", "ONRY6",
                                 "DREDGE", "MASTERMIND", "KNIGHT", "SKULL MERCHANT", "SINGULARITY", "XENOMORPH", "GOOD GUY"],
                               'stage_judge_switch': 0}
+    settings = ConfigObj(CFG_PATH, default_encoding='utf8')
+    cfg = ConfigParser()
+    cfg.read(CFG_PATH, encoding='utf-8')
     initialize()
     read_cfg()
+    if QLocale.system().language() != QLocale.Chinese or cfg.getboolean("UPDATE", "rb_english"):
+        dbd_window.rb_english_change()
     custom_select = CustomSelectKiller()
     qss_style = '''
             QPushButton:hover {
@@ -2064,7 +2069,7 @@ if __name__ == '__main__':
     hotkey.start()
     authorization()
     notice()
-    if eq(settings.value("UPDATE/cb_autocheck"), 'true'):
+    if eq(cfg.getboolean("UPDATE", "cb_autocheck"), True):
         update()
     # dbd_window.setStyleSheet(qss_style)
     dbd_window.show()
