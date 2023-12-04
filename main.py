@@ -1,5 +1,6 @@
 import os.path
 import random
+import subprocess
 import time
 import threading
 import sys
@@ -833,7 +834,7 @@ def authorization():
             sys.exit(0)
 
 
-def update():
+def check_update():
     """check the update"""
     ver_now = 'V5.1.4'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
@@ -845,13 +846,17 @@ def update():
                                       "检查到新版本：{b}\n\n当前的使用版本是：{a}，推荐更新。".format(a=ver_now, b=ver_new)
                                       , "检查更新", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
             if eq(confirm, 6):  # 打开
-                webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
+                # webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
+                subprocess.call("更新update.exe")
+                sys.exit()
         elif cfg.getboolean("UPDATE", "rb_english"):
             confirm = win32api.MessageBox(0,
                                       "New version detected: {b}\n\nThe current version is: {a}, recommended update.".format(a=ver_now, b=ver_new)
                                       , "Check for updates", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
             if eq(confirm, 6):  # 打开
-                webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
+                # webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
+                subprocess.call("更新update.exe")
+                sys.exit()
 
 def notice():
     """take a message"""
@@ -1106,7 +1111,7 @@ def disconnect_check():
     :return: bool"""
     for sum in range(80, 130, 10):
         ocr = OCR(299, 614, 1796, 862, sum)#110
-        if "好的" in ocr or "关闭" in ocr or "OK" in ocr:
+        if "好的" in ocr or "关闭" in ocr or "OK" in ocr or "CLOSE" in ocr:
             return True
     return False
 def news():
@@ -2070,7 +2075,7 @@ if __name__ == '__main__':
     authorization()
     notice()
     if eq(cfg.getboolean("UPDATE", "cb_autocheck"), True):
-        update()
+        check_update()
     # dbd_window.setStyleSheet(qss_style)
     dbd_window.show()
     sys.exit(app.exec())
