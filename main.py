@@ -995,7 +995,7 @@ def starthall():
     log.print(f"{now_time()}……///starthall()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(1446, 771, 1920, 1080, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……识别内容为：\n********************\n{ocr}\n********************")
         if "开始游戏" in ocr or "PLAY" in ocr:
             log.print(f"{now_time()}……///starthall()识别函数已识别···")
             return True
@@ -1009,7 +1009,7 @@ def readyhall():
     log.print(f"{now_time()}……///readyhall()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(1446, 771, 1920, 1080, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "准备就绪" in ocr or "READY" in ocr:
             log.print(f"{now_time()}……///readyhall()识别函数已识别···")
             return True
@@ -1023,7 +1023,7 @@ def readycancle():
     log.print(f"{now_time()}……///readycancle()识别函数识别中···")
     for sum in range(50, 120, 10):
         ocr = OCR(1446, 771, 1920, 1080, sum)  # 80
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "取消" in ocr or "CANCEL" in ocr:
             log.print(f"{now_time()}……///readycancle()识别函数已识别···")
             return True
@@ -1046,7 +1046,7 @@ def gameover():
     log.print(f"{now_time()}……///gameover()识别函数识别中···")
     for sum in range(20, 110, 10):
         ocr = OCR(1577, 932, 1820, 1028, sum)  # 70
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         # ocr2 = OCR(1745, 991, 1820, 1028, 30)
         if "继续" in ocr or "CONTINUE" in ocr:
             log.print(f"{now_time()}……///gameover()识别函数已识别···")
@@ -1136,7 +1136,7 @@ def rites():
     log.print(f"{now_time()}……///rites()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(0, 126, 838, 982, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
             log.print(f"{now_time()}……///rites()识别函数已识别···")
             return True
@@ -1160,7 +1160,7 @@ def daily_ritual_main():
     log.print(f"{now_time()}……///daily_ritual_main()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(180, 74, 1017, 825, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
             log.print(f"{now_time()}……///daily_ritual_main()识别函数已识别···")
             return True
@@ -1176,7 +1176,7 @@ def mainjudge():
     log.print(f"{now_time()}……///mainjudge()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(180, 74, 1017, 825, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "商城" in ocr or "STORE" in ocr:
             log.print(f"{now_time()}……///mainjudge()识别函数已识别···")
             return True
@@ -1190,7 +1190,7 @@ def disconnect_check():
     log.print(f"{now_time()}……///断线重连检测···")
     for sum in range(80, 130, 10):
         ocr = OCR(299, 614, 1796, 862, sum)  # 110
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "好的" in ocr or "关闭" in ocr or "OK" in ocr or "CLOSE" in ocr:
             log.print(f"{now_time()}……///断线重连检测，已断线。")
             return True
@@ -1204,7 +1204,7 @@ def news():
     log.print(f"{now_time()}……///news()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(548, 4, 1476, 256, sum)
-        log.print(f"{now_time()}……****\n识别内容为：\n{ocr}\n****")
+        log.print(f"{now_time()}……********************\n识别内容为：\n{ocr}\n********************")
         if "新内容" in ocr or "NEW CONTENT" in ocr:
             log.print(f"{now_time()}……///news()识别函数已识别···")
             return True
@@ -1241,7 +1241,7 @@ def disconnect_confirm(sum=120):
     # 使用Tesseract OCR引擎识别图像中的文本
     result = pytesseract.image_to_boxes(img, config=custom_config, lang='chi_sim+eng')
     result = result.split(' ')
-    log.print(f"{now_time()}……****\n识别内容为：\n{result}\n****")
+    log.print(f"{now_time()}……********************\n识别内容为：\n{result}\n********************")
     if ne(len(result), 0):
         log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
         confirmX, confirmY = int(result[3]), int(result[4])
