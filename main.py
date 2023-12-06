@@ -50,7 +50,27 @@ class Coord:
         self.x2_coor = int(self.x2_coor)
         self.y2_coor = int(self.y2_coor)
 
+class Logger(object):
+    def __init__(self, log_path="default.log"):
+        import sys
+        self.terminal = sys.stdout
+        self.log = open(log_path, "wb", buffering=0)  # , encoding="utf-8"
+
+    def print(self, *message):
+        message = ",".join([str(it) for it in message])
+        self.terminal.write(str(message) + "\n")
+        self.log.write(str(message).encode('utf-8') + b"\n")
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.log.close()
+
+
 def begin():
+    file = open(LOG_PATH, 'w').close()
     save_cfg()
     cfg.read(CFG_PATH, encoding='utf-8')
     # begin = multiprocessing.Process(target=AFK)
@@ -66,6 +86,7 @@ def begin():
 
 
 def kill():
+    log.close()
     psutil.Process(os.getpid()).kill()
 
 
@@ -860,10 +881,10 @@ def check_update():
 
 def notice():
     """take a message"""
-    notice_now = 'test gi:'
+    notice_now = 'test git'
     html_str = requests.get('https://gitee.com/kioley/test-git').content.decode()
     notice_new = re.search('title>(.*?)<', html_str, re.S).group(1)[0:8]
-    notice = re.search('title>(.*?)<', html_str, re.S).group(1)[10:]
+    notice = re.search('title>(.*?)<', html_str, re.S).group(1)[9:]
     if ne(notice_now, notice_new):
         win32api.MessageBox(0, notice, "通知", win32con.MB_OK | win32con.MB_ICONINFORMATION)
 
@@ -959,27 +980,36 @@ def OCR(x1, y1, x2, y2, sum=128):
 def starthall():
     """check the start  hall
     :return: bool"""
+    log.print(f"{now_time()}……///starthall()识别函数识别中···")
     for sum in range(80, 130, 10):
-        ocr = OCR(1446, 771, ScreenX, ScreenY, sum)
+        ocr = OCR(1446, 771, 1920, 1080, sum)
         if "开始游戏" in ocr or "PLAY" in ocr:
+            log.print(f"{now_time()}……///starthall()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///starthall()识别函数未识别···")
     return False
 def readyhall():
     """check the  ready hall
     :return: bool"""
+    log.print(f"{now_time()}……///readyhall()识别函数识别中···")
     for sum in range(80, 130, 10):
-        ocr = OCR(1446, 771, ScreenX, ScreenY, sum)
+        ocr = OCR(1446, 771, 1920, 1080, sum)
         if "准备就绪" in ocr or "READY" in ocr:
+            log.print(f"{now_time()}……///readyhall()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///readyhall()识别函数未识别···")
     return False
 
 def readycancle():
     """检查游戏准备后的取消，消失就进入对局加载
     :return: bool"""
+    log.print(f"{now_time()}……///readycancle()识别函数识别中···")
     for sum in range(50, 120, 10):
-        ocr = OCR(1446, 771, ScreenX, ScreenY, sum)#80
+        ocr = OCR(1446, 771, 1920, 1080, sum)#80
         if "取消" in ocr or "CANCEL" in ocr:
+            log.print(f"{now_time()}……///readycancle()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///readycancle()识别函数未识别···")
     return False
 
 def map_name():
@@ -992,11 +1022,14 @@ def map_name():
 def gameover():
     """检查对局后的继续
     :return: bool"""
+    log.print(f"{now_time()}……///gameover()识别函数识别中···")
     for sum in range(20, 110, 10):
         ocr1 = OCR(1577, 932, 1820, 1028, sum)#70
         # ocr2 = OCR(1745, 991, 1820, 1028, 30)
         if "继续" in ocr1 or "CONTINUE" in ocr1:
+            log.print(f"{now_time()}……///gameover()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///gameover()识别函数未识别···")
     return False
 
 def stage_judge():
@@ -1013,6 +1046,14 @@ def stage_judge():
     stage_judge_value = gameover()
     if stage_judge_value:
         end_stage = "游戏结束"
+
+def now_time():
+    # 获得当前时间时间戳
+    now = int(time.time())
+    # 转换为其他日期格式,如:"%Y-%m-%d %H:%M:%S"
+    timeArray = time.localtime(now)
+    otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+    return otherStyleTime
 
 # def setting_button():
 #     """check the setting button
@@ -1068,10 +1109,13 @@ def stage_judge():
 def rites():
     """check rites complete
     :return:bool"""
+    log.print(f"{now_time()}……///rites()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(0, 126, 838, 982, sum)
         if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
+            log.print(f"{now_time()}……///rites()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///rites()识别函数未识别···")
     return False
 
 # 检测活动奖励  #####未完成
@@ -1087,10 +1131,13 @@ def daily_ritual_main():
     """check the daily task after serious disconnect -->[main]
     :return: bool
     """
+    log.print(f"{now_time()}……///daily_ritual_main()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(180, 74, 1017, 825, sum)
         if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
+            log.print(f"{now_time()}……///daily_ritual_main()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///daily_ritual_main()识别函数未识别···")
     return False
 
 
@@ -1099,33 +1146,43 @@ def mainjudge():
     check the game whether return the main menu. -->[quit button]
     :return: bool
     """
+    log.print(f"{now_time()}……///mainjudge()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(180, 74, 1017, 825, sum)
         if "商城" in ocr or "STORE" in ocr:
+            log.print(f"{now_time()}……///mainjudge()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///mainjudge()识别函数未识别···")
     return False
 
 
 def disconnect_check():
     """After disconnect check the connection status
     :return: bool"""
+    log.print(f"{now_time()}……///断线重连检测···")
     for sum in range(80, 130, 10):
         ocr = OCR(299, 614, 1796, 862, sum)#110
         if "好的" in ocr or "关闭" in ocr or "OK" in ocr or "CLOSE" in ocr:
+            log.print(f"{now_time()}……///断线重连检测，已断线。")
             return True
     return False
+
 def news():
     """断线重连后的新闻
     :return: bool"""
+    log.print(f"{now_time()}……///news()识别函数识别中···")
     for sum in range(80, 130, 10):
         ocr = OCR(548, 4, 1476, 256, sum)
         if "新内容" in ocr or "NEW CONTENT" in ocr:
+            log.print(f"{now_time()}……///news()识别函数已识别···")
             return True
+    log.print(f"{now_time()}……///news()识别函数未识别···")
     return False
 
 def disconnect_confirm(sum=120):
     """After disconnection click confirm button. not need process.
     :return: int"""
+    log.print(f"{now_time()}……///disconnect_confirm()识别函数识别中···")
     disconnect_check_colorXY = Coord(299, 614, 1796, 862)
     disconnect_check_colorXY.processed_coord()
     disconnect_check_colorXY.area_check()
@@ -1152,9 +1209,11 @@ def disconnect_confirm(sum=120):
     result = pytesseract.image_to_boxes(img, config=custom_config, lang='chi_sim+eng')
     result = result.split(' ')
     if ne(len(result), 0):
+        log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
         confirmX, confirmY = int(result[3]), int(result[4])
         moveclick(disconnect_check_colorXY.x1_coor+confirmX, disconnect_check_colorXY.y2_coor-confirmY,
                   1, 1)
+    log.print(f"{now_time()}……///disconnect_confirm()识别函数未识别···")
 # def skill_check():
 #     """skill check in the game
 #     :return: bool
@@ -1179,6 +1238,7 @@ def moveclick(x, y, delay=0, click_delay=0):
     """mouse move to a true place and click """
     coorXY = Coord(x, y)
     coorXY.processed_coord()
+    coorXY.area_check()
     py.moveTo(coorXY.x1_coor, coorXY.y1_coor)
     time.sleep(delay)
     py.click()
@@ -1198,6 +1258,7 @@ def reconnect():
     """Determine whether the peer is disconnected and return to the matching hall
     :return: bool -->TRUE
     """
+    log.print(f"{now_time()}……///正在进入重连···")
     time.sleep(2)
     # moveclick(586, 679, cli
     # moveclick(570, 710, click_delay=1)  # 错误代码2
@@ -1215,12 +1276,15 @@ def reconnect():
     # if eq(segment_reset(), True):
     #     moveclick(1462, 841)
     # 检测血点，判断断线情况
-    if eq(starthall(), True) or eq(readyhall(), True):# 小退
+    if eq(starthall(), True) or eq(readyhall(), True):  # 小退
+        log.print(f"{now_time()}……///断线重连程度检测·····小退")
         return True
     elif eq(gameover(), True):  # 意味着不在大厅
         moveclick(1761, 1009)
+        log.print(f"{now_time()}……///断线重连程度检测·····小退")
         return True
     else:  # 大退
+        log.print(f"{now_time()}……///断线重连程度检测·····大退")
         main_quit = False
         while main_quit == False:
             while eq(disconnect_check(), True):
@@ -1251,6 +1315,7 @@ def reconnect():
                 elif eq(cfg.getboolean("CPCI", "rb_killer"), True):
                     moveclick(135, 133)
                 main_quit = True
+        log.print(f"{now_time()}……///已重连完成···")
         return True
 
 def random_movement():
@@ -1712,7 +1777,7 @@ def character_selection():
         character_num = custom_select.match_select_killer_lst
         judge = 1
     py.sleep(1)
-    moveclick(1, 1, 1, 1)
+    moveclick(10, 10, 1, 1)
     moveclick(141, 109, 1, 1)  # 角色按钮
     timey = floordiv(character_num[character_num_b], 4)  # 取整
     timex = mod(character_num[character_num_b], 4)  # 取余
@@ -1798,17 +1863,22 @@ def AFK():
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-    moveclick(1, 1)
+    moveclick(10, 10)
+    log.print(f"{now_time()}---启动脚本····")
+    circulate_number = 0
     while True:
         reconnection = False
+        circulate_number += 1
         '''
         匹配
 
         '''
         matching = False
         while not matching:
+            log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于匹配阶段···")
             # 判断条件是否成立
             if eq(starthall(), True):
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏处于匹配大厅···")
                 # 判断游戏所处的阶段
                 if eq(self_defined_parameter['stage_judge_switch'], 1):
                     stage_judge()
@@ -1843,6 +1913,7 @@ def AFK():
                 # 进行准备
                 while eq(starthall(), True):  # debug:False -->test
                     moveclick(1742, 931, 1, 0.5)  # 处理坐标，开始匹配
+                    log.print(f"{now_time()}---第{circulate_number}次脚本循环---处于匹配大厅，处理坐标，开始匹配···")
                     moveclick(20, 689, 1.5)  # 商城上空白
                     if eq(disconnect_check(), True):  # 断线检测
                         reconnection = reconnect()
@@ -1860,13 +1931,17 @@ def AFK():
         准备加载
         '''
         ready_load = False  # debug:False -->test
+        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备加载阶段···")
         # 检测游戏所在阶段
         if eq(self_defined_parameter['stage_judge_switch'], 1):
             if ne(match_stage, "匹配大厅"):
                 ready_load = True
+
         while not ready_load:
             if eq(readycancle(), False):
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本准备加载阶段结束···")
                 ready_load = True
+            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在载入中···")
 
         # 重连返回值的判断
         if eq(reconnection, True):
@@ -1876,6 +1951,7 @@ def AFK():
         准备
         '''
         ready_room = False  # debug:False -->True
+        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备阶段···")
         while not ready_room:
             # 判断游戏所处的阶段
             if eq(self_defined_parameter['stage_judge_switch'], 1):
@@ -1883,9 +1959,11 @@ def AFK():
                 if ready_stage != "准备房间":
                     break
             if eq(readyhall(), True):
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备大厅···")
                 time.sleep(5)
-                moveclick(1, 1, 2, 2)
+                moveclick(10, 10, 2, 2)
                 moveclick(1742, 931, 2, 0.5)
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---准备按钮点击完成···")
                 moveclick(20, 689)  # 商城上空白
                 if eq(readyhall(), False):
                     ready_room = True
@@ -1901,14 +1979,17 @@ def AFK():
         '''
 
         game_load = False
+        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局载入阶段···")
         # 检测游戏所在阶段
         if eq(self_defined_parameter['stage_judge_switch'], 1):
             if ne(ready_stage, "准备房间"):
                 game_load = True
         while not game_load:
             if eq(readycancle(), False):
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备加载阶段···")
                 game_load = True
                 time.sleep(5)
+            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在载入中···")
         # 重连返回值判断
         if eq(reconnection, True):
             continue
@@ -1918,9 +1999,13 @@ def AFK():
         '''
         game = False
         # in_game = False
+        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局动作执行阶段···")
+        action_time = 0
         while not game:
+            action_time += 1
             if eq(gameover(), True):
-                moveclick(1, 1, 0.5, 1)
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局已结束···")
+                moveclick(10, 10, 0.5, 1)
                 time.sleep(2)
                 # 段位重置
                 # if eq(segment_reset(), True):
@@ -1943,7 +2028,7 @@ def AFK():
                         and eq(cfg.getboolean("CPCI", "rb_killer"), True)):
                     auto_message()
                 moveclick(1761, 1009, 0.5, 1)  # return hall
-                moveclick(1, 1)
+                moveclick(10, 10)
                 if eq(gameover(), False):
                     game = True
                 elif eq(disconnect_check(), True):
@@ -1955,6 +2040,7 @@ def AFK():
                 #         in_game = True
                 # 从前台获取 阵营数据，再判断行为模式
                 # if eq(in_game, True):
+                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏处于对局阶段···动作循环已执行{action_time}次")
                 if eq(cfg.getboolean("CPCI", "rb_survivor"), True):
                     survivor_action()
                 elif eq(cfg.getboolean("CPCI", "rb_fixed_mode"), True):
@@ -1979,6 +2065,7 @@ if __name__ == '__main__':
     SEARCH_PATH_EN = os.path.join(BASE_DIR, "searchfile_en.txt")
     SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
     TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
+    LOG_PATH = os.path.join(BASE_DIR, "debug_data.log")
     pytesseract.pytesseract.tesseract_cmd = OCR_PATH
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
@@ -1996,6 +2083,7 @@ if __name__ == '__main__':
                                 "DREDGE", "MASTERMIND", "KNIGHT", "SKULL MERCHANT", "SINGULARITY", "XENOMORPH", "GOOD GUY"],
                               'stage_judge_switch': 0}
     settings = ConfigObj(CFG_PATH, default_encoding='utf8')
+    log = Logger(LOG_PATH)
     cfg = ConfigParser()
     cfg.read(CFG_PATH, encoding='utf-8')
     initialize()
