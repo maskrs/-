@@ -1241,7 +1241,7 @@ def disconnect_confirm(sum=120):
     # 使用Tesseract OCR引擎识别图像中的文本
     result = pytesseract.image_to_boxes(img, config=custom_config, lang='chi_sim+eng')
     result = result.split(' ')
-    log.print(f"{now_time()}……识别内容为：\n********************\n{ocr}\n********************")
+    log.print(f"{now_time()}……识别内容为：\n********************\n{result}\n********************")
     if ne(len(result), 0):
         log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
         confirmX, confirmY = int(result[3]), int(result[4])
