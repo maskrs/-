@@ -187,7 +187,7 @@ class Ui_MainWindow(object):
         self.cb_killer_do.setText(_translate("MainWindow", "屠夫赛后自动留言"))
         self.pb_start.setText(_translate("MainWindow", "开 始"))
         self.pb_stop.setText(_translate("MainWindow", "停 止"))
-        self.lb_version.setText(_translate("MainWindow", "ver 5.1.4"))
+        self.lb_version.setText(_translate("MainWindow", "ver 5.1.5"))
         self.lb_message.setText(_translate("MainWindow", "Q群：728284728"))
         self.lb_language.setText(_translate("MainWindow", "语言/Language:"))
         self.rb_chinese.setText(_translate("MainWindow", "中文"))
