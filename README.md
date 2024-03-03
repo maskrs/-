@@ -11,7 +11,7 @@
 |~6.血点防溢出插件【超过190万自动消耗血点，小于150万停止，防止溢出和过度消耗】~（已废弃）|
 
 ## 基本设置  
-★&ensp;运行 *DBD_AFK_TOOL.exe* 启动工具。启动时 **关闭代理**。
+★&ensp;运行 *DBD_AFK_TOOL.exe* 启动工具。
  
 ★&ensp;使用本工具请 *游戏内使用中文或英文语言（推荐）* ！
 
@@ -55,12 +55,9 @@
 ## 快捷键  
 
 - 快捷启动`ALT + HOME`  
-- 快捷关闭`ALT + END`
+- 快捷关闭`ALT + END`  
 
-<video width="320" height="240" controls>
-  <source src="[https://www.example.com/your-video.mp4](https://www.bilibili.com/video/BV18K42147x6/?vd_source=644e6fac1a9e2fe98505b6f9c09657ec)" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+### [视频演示](https://www.bilibili.com/video/BV18K42147x6/?vd_source=644e6fac1a9e2fe98505b6f9c09657ec)  
 
 ### [常见问题解答与故障排除](https://github.com/maskrs/DBD_AFK_TOOL/wiki)
 
