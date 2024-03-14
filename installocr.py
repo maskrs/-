@@ -1,12 +1,34 @@
+# -*- mode: python ; coding: utf-8 -*-
+import locale
 import os
 import sys
 import subprocess
-import shutil
+import time
+import webbrowser
 import win32api
 import win32con
 from tqdm import tqdm
 import requests
 
+
+def check_language():
+    system_language, _ = locale.getdefaultlocale()
+    return system_language.startswith('en')
+
+def start_menu():
+    if not system_language:
+        print("\n1、自动配置")
+        print("\n2、手动配置")
+        print("\n自动配置将自动下载配置所需文件。如果自动下载过慢，请选择手动配置。")
+        choice = input("\n请选择配置方式： ")
+        return choice
+    elif system_language:
+        print("\n1、Automatic configuration")
+        print("\n2、Manual configuration")
+        print("\nAutomatic configuration files are downloaded automatically. "
+              "If the automatic download is too slow, select manual configuration.")
+        choice = input("\nPlease select the configuration mode: ")
+        return choice
 def download_file(url, filename):
     response = requests.get(url, stream=True)
     total_size_in_bytes = int(response.headers.get('content-length', 0))
@@ -18,85 +40,91 @@ def download_file(url, filename):
             file.write(data)
     progress_bar.close()
     if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
-        print("ERROR, something went wrong")
+        print("Something Error。")
 
+def auto_download():
+    if not system_language:
+        print("\n本程序将自动下载配置所需文件。\n")
+        if os.path.exists(OCR_PATH):
+            print("tesseract-ocr引擎已安装。")
+        else:
+            try:
+                # 尝试执行'git --version'命令
+                subprocess.check_output('git --version', stderr=subprocess.DEVNULL, shell=True)
+                print("Git无需配置。")
+            except subprocess.CalledProcessError:
+                print("未检测到GIT，下载GIT中...请稍后\n")
+                download_file(
+                    'https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/Git-2.42.0.2-64-bit.exe',
+                    'Git-2.42.0.2-64-bit.exe')
+                print("\nGIT下载完成，等待安装…")
+                cmd = GIT_PATH + ' /sp- /silent /norestart'
+                subprocess.run(cmd)
+                if os.path.exists(GIT_PATH):
+                    os.remove(GIT_PATH)
+            print("\n正在配置OCR引擎...\n")
+            os.environ['PATH'] = 'C:\Program Files\Git\cmd' + ';' + os.environ['PATH']
+            subprocess.check_output(
+                ['git', 'clone', '--depth', '1', 'https://gitee.com/kioley/tesseract-ocr.git', 'tesseract-ocr'])
+        win32api.MessageBox(0, "初始化完成。", "提示", win32con.MB_OK | win32con.MB_ICONQUESTION)  ##########
+        sys.exit()
+    elif system_language:
+        print("\nThis program will automatically download the required configuration files.\n")
+        if os.path.exists(OCR_PATH):
+            print("tesseract-ocr is installed.")
+        else:
+            try:
+                # 尝试执行'git --version'命令
+                subprocess.check_output('git --version', stderr=subprocess.DEVNULL, shell=True)
+                print("GIT does not require configuration.")
+            except subprocess.CalledProcessError:
+                print("No GIT detected, download GIT... Please wait\n")
+                download_file(
+                    'https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/Git-2.42.0.2-64-bit.exe',
+                    'Git-2.42.0.2-64-bit.exe')
+                print("\nGIT download complete, waiting for installation...")
+                cmd = GIT_PATH + ' /sp- /silent /norestart'
+                subprocess.run(cmd)
+                if os.path.exists(GIT_PATH):
+                    os.remove(GIT_PATH)
+            print("\nConfiguring the OCR engine...\n")
+            os.environ['PATH'] = 'C:\Program Files\Git\cmd' + ';' + os.environ['PATH']
+            subprocess.check_output(
+                ['git', 'clone', '--depth', '1', 'https://gitee.com/kioley/tesseract-ocr.git', 'tesseract-ocr'])
+        win32api.MessageBox(0, "Initialization is complete.", "Tip", win32con.MB_OK | win32con.MB_ICONQUESTION)
+        sys.exit()
 
-BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
-# check_path= os.path.join(BASE_DIR, "tesseract-ocr.exe")
-OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
-# DOWN_PATH = os.path.join(BASE_DIR, "download")
-GIT_PATH = os.path.join(BASE_DIR, "Git-2.42.0.2-64-bit.exe")
-# OLD_PATH = os.path.join(BASE_DIR, 'download\\tesseract-ocr.exe')
-# L_PATH = os.path.join(BASE_DIR, 'chi_sim.traineddata')
-# N_PATH = os.path.join(BASE_DIR, 'tesseract-ocr\\tessdata')
-print("请确保使用管理员权限运行本程序！！")
-print(" ")
-print("本程序将自动下载配置所需文件。如果下载速度过慢，可以手动下载。")
-print(" ")
-# print("手动下载地址：https://wwh.lanzoue.com/itGqd179rg0b?password=31vb ， 密码【31vb】，下载到当前目录，重新运行本程序。")
-# print(" ")
-# input("请按回车键继续...")
-# if os.path.exists(DOWN_PATH):
-#     # subprocess.run(['rmdir ', DOWN_PATH])
-#     file_name = "del.bat"
-#     with open(file_name, "w") as file:
-#         # 写入命令
-#         file.write("@echo off\n")
-#         file.write("rmdir /s /q %~dp0download")
-#     subprocess.call('del.bat')
-#     os.remove('del.bat')
-# 设置要下载的文件URL和存储路径
-# print(" ")
-if os.path.exists(OCR_PATH):
-    print("tesseract-ocr引擎已安装。")
-else:
-    if os.path.exists(OCR_PATH) == False:
-        try:
-            # 尝试执行'git --version'命令
-            subprocess.check_output('git --version', stderr=subprocess.DEVNULL, shell=True)
-            print("Git无需配置。")
-        except subprocess.CalledProcessError:
-            print("未检测到GIT，配置GIT中...请稍后")
-            download_file(
-                'https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/Git-2.42.0.2-64-bit.exe',
-                'Git-2.42.0.2-64-bit.exe')
-            cmd = GIT_PATH + ' /sp- /silent /norestart'
-            subprocess.run(cmd)
-            os.environ['MY_GIT'] = 'C:\Program Files\Git\cmd'
-            if os.path.exists(GIT_PATH):
-                os.remove(GIT_PATH)
-        print(" ")
-        print("正在配置OCR引擎...")
-        print(" ")
-        subprocess.check_output(['git', 'clone', 'https://gitee.com/kioley/tesseract-ocr.git'])
-        # if os.path.exists(DOWN_PATH):
-        #     file_name = "del.bat"
-        #     with open(file_name, "w") as file:
-        #         # 写入命令
-        #         file.write("@echo off\n")
-        #         file.write("rmdir /s /q %~dp0download")
-        #     subprocess.call('del.bat')
-        #     os.remove('del.bat')
-        # os.popen(check_path)
-    elif os.path.exists(OCR_PATH):
-        print("OCR引擎已配置。")
-        # os.popen(check_path)
-        # if os.path.exists(DOWN_PATH):
-        #     file_name = "del.bat"
-        #     with open(file_name, "w") as file:
-        #         # 写入命令
-        #         file.write("@echo off\n")
-        #         file.write("rmdir /s /q %~dp0download")
-        #     subprocess.call('del.bat')
-        #     os.remove('del.bat')
-    print(" ")
-    # if os.path.exists(L_PATH):
-    #     shutil.move(L_PATH, N_PATH)
-    # else:
-    #     win32api.MessageBox(0, "中文附加模块丢失！请重新解压压缩包。", "提示", win32con.MB_OK | win32con.MB_ICONWARNING)
-    #     sys.exit()
-os.environ['MY_DIRECTORY'] = OCR_PATH
-# 检查环境变量是否添加成功
-if 'MY_DIRECTORY' in os.environ:
-    win32api.MessageBox(0, "初始化成功。", "提示", win32con.MB_OK | win32con.MB_ICONQUESTION)
-    sys.exit()
+def manual_download():
+    if not system_language:
+        print("\n即将打开项目，请手动下载整个项目文件。")
+        time.sleep(2)
+        webbrowser.open("https://gitee.com/kioley/tesseract-ocr.git")
+        input("\n按任意键退出...")
+        sys.exit()
+    elif system_language:
+        print("\nAbout to open the project, please download the entire project file manually.")
+        time.sleep(2)
+        webbrowser.open("https://gitee.com/kioley/tesseract-ocr.git")
+        input("\nPress any key to exit...")
+        sys.exit()
+
+if __name__ == '__main__':
+    BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+    OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
+    GIT_PATH = os.path.join(BASE_DIR, "Git-2.42.0.2-64-bit.exe")
+    os.environ['NO_PROXY'] = 'github.com'
+    system_language = check_language()
+    print("""
+        ____  ____  ____       ___    ________ __    __________  ____  __
+       / __ \/ __ )/ __ \     /   |  / ____/ //_/   /_  __/ __ \/ __ \/ /
+      / / / / __  / / / /    / /| | / /_  / ,<       / / / / / / / / / /
+     / /_/ / /_/ / /_/ /    / ___ |/ __/ / /| |     / / / /_/ / /_/ / /___
+    /_____/_____/_____/____/_/  |_/_/   /_/ |_|____/_/  \____/\____/_____/
+                     /_____/                 /_____/
+    ========================================================================
+    """)
+    choice = start_menu()
+    if choice == "1":
+        auto_download()
+    elif choice == "2":
+        manual_download()

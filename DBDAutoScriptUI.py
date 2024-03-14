@@ -56,6 +56,7 @@ class Ui_MainWindow(object):
         self.rb_fixed_mode.setObjectName("rb_fixed_mode")
         self.rb_random_mode = QtWidgets.QRadioButton(self.frame_3)
         self.rb_random_mode.setGeometry(QtCore.QRect(200, 40, 91, 16))
+        self.rb_random_mode.setStyleSheet("")
         self.rb_random_mode.setObjectName("rb_random_mode")
         self.line_2 = QtWidgets.QFrame(self.frame_3)
         self.line_2.setGeometry(QtCore.QRect(10, 60, 291, 20))
@@ -72,6 +73,7 @@ class Ui_MainWindow(object):
         self.lb_select_charactor.setObjectName("lb_select_charactor")
         self.pb_select_cfg = QtWidgets.QPushButton(self.frame_4)
         self.pb_select_cfg.setGeometry(QtCore.QRect(200, 40, 61, 23))
+        self.pb_select_cfg.setStyleSheet("")
         self.pb_select_cfg.setObjectName("pb_select_cfg")
         self.line_3 = QtWidgets.QFrame(self.frame_4)
         self.line_3.setGeometry(QtCore.QRect(10, 70, 291, 20))
@@ -144,6 +146,10 @@ class Ui_MainWindow(object):
         self.rb_english = QtWidgets.QRadioButton(self.frame_7)
         self.rb_english.setGeometry(QtCore.QRect(210, 10, 71, 16))
         self.rb_english.setObjectName("rb_english")
+        self.pb_help = QtWidgets.QPushButton(self.frame_6)
+        self.pb_help.setGeometry(QtCore.QRect(20, 70, 71, 21))
+        self.pb_help.setCursor(QtGui.QCursor(QtCore.Qt.WhatsThisCursor))
+        self.pb_help.setObjectName("pb_help")
         self.frame_6.raise_()
         self.frame_2.raise_()
         self.frame_3.raise_()
@@ -164,9 +170,10 @@ class Ui_MainWindow(object):
         self.rb_killer.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
         self.rb_random_mode.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
         self.rb_fixed_mode.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
-        self.rb_chinese.clicked['bool'].connect(self.pb_search.setDisabled) # type: ignore
-        self.rb_english.clicked['bool'].connect(self.pb_search.setEnabled) # type: ignore
         self.rb_english.clicked.connect(self.lb_message.hide) # type: ignore
+        self.rb_chinese.clicked['bool'].connect(self.lb_message.show) # type: ignore
+        self.rb_survivor.clicked['bool'].connect(self.pb_search.setDisabled) # type: ignore
+        self.rb_killer.clicked['bool'].connect(self.pb_search.setEnabled) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -187,8 +194,9 @@ class Ui_MainWindow(object):
         self.cb_killer_do.setText(_translate("MainWindow", "屠夫赛后自动留言"))
         self.pb_start.setText(_translate("MainWindow", "开 始"))
         self.pb_stop.setText(_translate("MainWindow", "停 止"))
-        self.lb_version.setText(_translate("MainWindow", "ver 5.1.5"))
+        self.lb_version.setText(_translate("MainWindow", "ver 5.1.6"))
         self.lb_message.setText(_translate("MainWindow", "Q群：728284728"))
         self.lb_language.setText(_translate("MainWindow", "语言/Language:"))
         self.rb_chinese.setText(_translate("MainWindow", "中文"))
         self.rb_english.setText(_translate("MainWindow", "English"))
+        self.pb_help.setText(_translate("MainWindow", "帮 助"))
