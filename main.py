@@ -265,8 +265,8 @@ class CustomSelectKiller:
             self.sign_1 = "未知恶物"
             self.sign_2 = "角色"
         elif cfg.getboolean("UPDATE", "rb_english"):
-            self.SEARCH_PATH = SEARCH_PATH_EN
             self.all_killer_name = self_defined_parameter['all_killer_name_EN']
+            self.SEARCH_PATH = SEARCH_PATH_EN
             self.sign_1 = "UNKNOWN"
             self.sign_2 = "CHARACTERS"
         # print(self.all_killer_name)  ##### debug
@@ -1203,8 +1203,11 @@ def reconnect():
     """Determine whether the peer is disconnected and return to the matching hall
     :return: bool -->TRUE
     """
+    global stop_space, stop_action
     log.print(f"{now_time()}……///正在进入重连···")
     time.sleep(2)
+    stop_space = True  # 自动空格线程标志符
+    stop_action = True  # 动作线程标志符
     # moveclick(586, 679, cli
     # moveclick(570, 710, click_delay=1)  # 错误代码2
     # moveclick(594, 721, click_delay=1)  # 错误代码3
@@ -1705,10 +1708,10 @@ def afk():
         kill()
     if not custom_select.select_killer_lst and eq(cfg.getboolean("CPCI", "rb_killer"), True):
         if cfg.getboolean("UPDATE", "rb_chinese"):
-            win32api.MessageBox(hwnd, "未选择屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
+            win32api.MessageBox(hwnd, "至少选择一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
             kill()
         elif cfg.getboolean("UPDATE", "rb_english"):
-            win32api.MessageBox(hwnd, "No killer selected.", "Prompt",
+            win32api.MessageBox(hwnd, "Choose at least one killer.", "Tip",
                                 win32con.MB_OK | win32con.MB_ICONASTERISK)
             kill()
 
@@ -1748,8 +1751,11 @@ def afk():
                 if cfg.getboolean("CPCI", "rb_killer"):
                     time.sleep(1)
                     if eq(list_number, 1):
-                        character_selection()
+                        if (custom_select.match_select_killer_lst
+                                not in custom_select.select_killer_lst):  # 当前选择的角色不在列表中时，增加到列表中
+                            custom_select.select_killer_lst.extend(custom_select.match_select_killer_lst)
                         list_number = 0
+                        time.sleep(1)
                     elif gt(list_number, 1):
                         character_selection()
                 elif cfg.getboolean("CPCI", "rb_survivor"):
@@ -1784,7 +1790,7 @@ def afk():
             if eq(readycancle(), False):
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本准备加载阶段结束···")
                 ready_load = True
-            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在载入中···")
+            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在准备加载中···")
 
         # 重连返回值的判断
         if eq(reconnection, True):
@@ -1833,7 +1839,7 @@ def afk():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备加载阶段···")
                 game_load = True
                 time.sleep(5)
-            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在载入中···")
+            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局正在载入中···")
 
         # 重连返回值判断
         if reconnection:
@@ -1917,7 +1923,7 @@ if __name__ == '__main__':
     CFG_PATH = os.path.join(BASE_DIR, "cfg.cfg")
     SEARCH_PATH_CN = os.path.join(BASE_DIR, "searchfile_cn.txt")
     SEARCH_PATH_EN = os.path.join(BASE_DIR, "searchfile_en.txt")
-    SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
+    # SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
     TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
     LOG_PATH = os.path.join(BASE_DIR, "debug_data.log")
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
