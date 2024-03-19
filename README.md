@@ -62,3 +62,9 @@
 ### [常见问题解答与故障排除](https://github.com/maskrs/DBD_AFK_TOOL/wiki)
 
 ### 推荐：  [黎明杀机自动血网工具](https://github.com/WKhistory/DBDAuto_BPWeb)  
+&ensp;
+&ensp;
+&ensp;  
+    
+# 捐 ❤ 献  
+&ensp;<img src="https://gitee.com/kioley/DBD_AFK_TOOL/raw/main/image-foder/%E6%94%AF%E4%BB%98%E5%AE%9D%E4%BB%98%E6%AC%BE.jpg" width="300px"> &ensp;&ensp;&ensp;&ensp; <img src="https://gitee.com/kioley/DBD_AFK_TOOL/raw/main/image-foder/%E5%BE%AE%E4%BF%A1%E4%BB%98%E6%AC%BE.png" width="300px">
