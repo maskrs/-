@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import glob
 import os.path
 import random
 import subprocess
@@ -16,15 +17,16 @@ import requests
 import win32api
 import win32con
 import win32gui
+import keyboard
 from PIL import Image
 from PyQt5.QtCore import QTranslator, QLocale, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
-from pynput import keyboard
 from DBDAutoScriptUI import Ui_MainWindow
 from keyboard_operation import key_down, key_up
 from selec_killerUI import Ui_Dialog
+from simpleaudio import WaveObject
 
 
 class Coord:
@@ -94,6 +96,18 @@ def begin():
 
 
 def kill():
+    # 获取当前目录下所有的.jpg文件
+    jpg_files = glob.glob('*.jpg')
+    # 遍历文件列表并尝试删除每个文件
+    for file in jpg_files:
+        try:
+            # 尝试删除文件
+            os.remove(file)
+            # print(f"成功删除文件: {file}")
+        except OSError as e:
+            # 如果文件正在被其他进程使用，通常会抛出PermissionError
+            log.print(f"{now_time()}……//////退出时删除文件时出错: {file} - {e.strerror}")
+
     log.close()
     psutil.Process(os.getpid()).kill()
 
@@ -725,8 +739,8 @@ def read_cfg():
         dbd_window.main_ui.pb_search.setDisabled(True)
     if cfg.getboolean("CPCI", "rb_killer"):
         dbd_window.main_ui.cb_killer_do.setEnabled(True)
-    if cfg.getboolean("UPDATE", "rb_english"):
-        dbd_window.main_ui.lb_message.hide()
+    # if cfg.getboolean("UPDATE", "rb_english"):
+    #     dbd_window.main_ui.lb_message.hide()
 
 
 
@@ -793,7 +807,7 @@ def check_ocr():
 
 def notice():
     """take a message"""
-    notice_now = 'test git'
+    notice_now = 'test giw'
     html_str = requests.get('https://gitee.com/kioley/test-git').content.decode()
     notice_new = re.search('title>(.*?)<', html_str, re.S).group(1)[0:8]
     notice = re.search('title>(.*?)<', html_str, re.S).group(1)[9:]
@@ -812,10 +826,11 @@ def screen_age():
     log.print(f"{now_time()}-----缩放后的分辨率为：{screen_size}\n")
 
 
+
 def hall_tip():
     """Child thread, survivor hall tip"""
     while True:
-        if eq(readyhall(), True):
+        if readyhall():
             py.press('enter')
             py.press('delete', 3)
             py.write('AFK')
@@ -823,13 +838,6 @@ def hall_tip():
             time.sleep(30)
         else:
             time.sleep(1)
-
-
-def autospace():
-    """Child thread, auto press space"""
-    while not stop_space:
-        key_down(hwnd, 'space')
-        time.sleep(5)
 
 
 def check_tip():
@@ -855,64 +863,99 @@ def check_tip():
                           win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
 
 
+
+def autospace():
+    """Child thread, auto press space"""
+    while not stop_space:
+        if not pause:
+            key_down(hwnd, 'space')
+            time.sleep(5)
+        else:
+            pass
+
+
+
 def action():
     cfg.read(CFG_PATH, encoding='utf-8')
     time.sleep(1)
     while not stop_action:
-        if cfg.getboolean("CPCI", "rb_survivor"):
-            survivor_action()
-        elif cfg.getboolean("CPCI", "rb_fixed_mode") and cfg.getboolean("CPCI", "rb_killer"):
-            killer_fixed_act()
-        elif cfg.getboolean("CPCI", "rb_random_mode") and cfg.getboolean("CPCI", "rb_killer"):
-            killer_action()
+        if not pause:
+            if cfg.getboolean("CPCI", "rb_survivor"):
+                survivor_action()
+            elif (cfg.getboolean("CPCI", "rb_fixed_mode") and
+                  cfg.getboolean("CPCI", "rb_killer")):
+                killer_fixed_act()
+            elif (cfg.getboolean("CPCI", "rb_random_mode") and
+                  cfg.getboolean("CPCI", "rb_killer")):
+                killer_action()
+        else:
+            pass
 
 
 def listen_key(pid):
     """Hotkey  setting, monitored keyboard input"""
 
-    cmb1 = [{keyboard.Key.alt_l, keyboard.Key.end}, {keyboard.Key.alt_r, keyboard.Key.end}]
-    cmb2 = [{keyboard.Key.alt_l, keyboard.KeyCode.from_char('p')},
-            {keyboard.Key.alt_r, keyboard.KeyCode.from_char('p')}]
-    cmb3 = [{keyboard.Key.alt_l, keyboard.Key.home}, {keyboard.Key.alt_r, keyboard.Key.home}]
-    current = set()
+    # 定义快捷键组合
+    hotkeys = [
+        'alt+end',
+        'f9',
+        'alt+home'
+    ]
+
 
     def execute():
+        # 播放WAV文件
+        play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
+        play_obj.play()
         kill = psutil.Process(pid)
 
-        # begingame._stop_event = threading.Event()
         def openexe():
             os.startfile(os.path.join(BASE_DIR, "DBD_AFK_TOOL.exe"))
 
-        open_exe = threading.Thread(target=openexe, daemon=True)
+        open_exe = threading.Thread(target=openexe)
         open_exe.start()
         time.sleep(1.5)
         kill.kill()
 
     def pause():
-        pause = psutil.Process(pid)
-        pause.suspend()
+        global pause
 
-    def resume():
-        resume = psutil.Process(pid)
-        resume.resume()
+        if not pause:
+            # 播放WAV文件
+            play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
+            play_obj.play()
+            pause = True
+        elif pause:
+            # 播放WAV文件
+            play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
+            play_obj.play()
+            pause = False
 
-    def on_press(key):
-        if any([key in z for z in cmb1]) or any([key in z for z in cmb2]) or any([key in z for z in cmb3]):
-            current.add(key)
-            if any(all(k in current for k in z) for z in cmb1):
-                execute()
-            elif any(all(k in current for k in z) for z in cmb2):
-                pause()
-            elif any(all(k in current for k in z) for z in cmb3):
-                begin()
+        try:
+            # 置顶
+            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
+            # 取消置顶
+            win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
-    def on_release(key):
-        if any([key in z for z in cmb1]) or any([key in z for z in cmb2]) or any([key in z for z in cmb3]):
-            current.remove(key)
+    def start():
+        # 播放WAV文件
+        play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
+        play_obj.play()
+        begin()
 
-    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        listener.join()
-
+    try:
+        keyboard.add_hotkey(hotkeys[0], execute)
+        keyboard.add_hotkey(hotkeys[1], pause)
+        keyboard.add_hotkey(hotkeys[2], start)
+        # 保持程序运行，监听键盘事件
+        keyboard.wait()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # 清理，移除监听
+        keyboard.unhook_all_hotkeys()
 
 def img_ocr(x1, y1, x2, y2, sum=128):
     """OCR识别图像，返回字符串
@@ -948,8 +991,10 @@ def img_ocr(x1, y1, x2, y2, sum=128):
         # 使用Tesseract OCR引擎识别图像中的文本
         result = pytesseract.image_to_string(ocr_image, config=custom_config, lang=lan)
         result = "".join(result.split())
-
-    os.remove(filename)  # 移除图像文件
+    try:
+        os.remove(filename)  # 移除图像文件
+    except Exception as e:
+        log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
     return result
 
 
@@ -999,11 +1044,11 @@ def gameover():
     """检查对局后的继续
     :return: bool"""
     log.print(f"{now_time()}……///gameover()识别函数识别中···")
-    for sum in range(110, 20, -10):
-        ocr = img_ocr(1446, 771, 1920, 1080, sum)  # 70
+    for sum in range(130, 50, -10):
+        ocr = img_ocr(56,46,370,172, sum)  # 70
         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
         # ocr2 = img_ocr(1745, 991, 1820, 1028, 30)
-        if "继续" in ocr or "CONTINUE" in ocr or "升级" in ocr or "UPGRADE" in ocr:
+        if "比赛" in ocr or "MATCH" in ocr:
             log.print(f"{now_time()}……///gameover()识别函数已识别···")
             return True
     log.print(f"{now_time()}……///gameover()识别函数未识别···")
@@ -1012,17 +1057,19 @@ def gameover():
 
 def stage_judge():
     """判断游戏所处在的阶段"""
-    global match_stage, ready_stage, end_stage
+
     log.print(f"{now_time()}……///脚本正在使用stage_judge()判断游戏所处阶段···")
-    stage_judge_value = starthall()
-    if stage_judge_value:
-        match_stage = "匹配大厅"
-    stage_judge_value = readyhall()
-    if stage_judge_value:
-        ready_stage = "准备房间"
-    stage_judge_value = gameover()
-    if stage_judge_value:
-        end_stage = "游戏结束"
+    if starthall():
+        stage = "匹配大厅"
+        return stage
+    elif readyhall():
+        stage = "准备房间"
+        return stage
+    elif gameover():
+        stage = "游戏结束"
+        return stage
+    else:
+        return None
 
 
 def now_time():
@@ -1133,6 +1180,16 @@ def news():
 def disconnect_confirm(sum=120):
     """After disconnection click confirm button. not need process.
     :return: int"""
+    # 定义局部函数，用于获取按钮坐标
+    def get_coordinates(result, target_string):
+        if target_string in result:
+            target = result.index(target_string)
+            # 确保不会越界，并且结果确实是数字
+            if target + 2 < len(result) and result[target + 1].isdigit() and result[target + 2].isdigit():
+                confirmX, confirmY = int(result[target + 1]), int(result[target + 2])
+                return confirmX, confirmY
+        return None, None
+
     log.print(f"{now_time()}……///disconnect_confirm()识别函数识别中···")
 
     disconnect_check_colorXY = Coord(299, 614, 1796, 800)
@@ -1164,20 +1221,38 @@ def disconnect_confirm(sum=120):
 
     with Image.open(filename) as ocr_image:
         # 使用Tesseract OCR引擎识别图像中的文本
-        result = pytesseract.image_to_string(ocr_image, config=custom_config, lang=lan)
-        result = "".join(result.split())
+        result = pytesseract.image_to_boxes(ocr_image, config=custom_config, lang=lan)
+        result = result.split(' ')
 
-    os.remove(filename)  # 移除缓存文件
+    try:
+        os.remove(filename)  # 移除图像文件
+    except Exception as e:
+        log.print(f"{now_time()}……//////离线确认删除文件时出错: {filename} - {e}")
 
     log.print(f"{now_time()}……//////识别内容为：\n{result}\n********************")
 
-    if ne(len(result), 0):
-        log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
-        confirmX, confirmY = int(result[3]), int(result[4])
-        moveclick(disconnect_check_colorXY.x1_coor + confirmX, disconnect_check_colorXY.y2_coor - confirmY,
-                  1, 1)
-    else:
+
+    # 定义需要查找的字符串列表
+    target_strings = ["好", "关", "继", "O", "C"]
+
+    # 初始化坐标
+    confirmX, confirmY = None, None
+
+    # 遍历目标字符串列表
+    for target_string in target_strings:
+        confirmx, confirmy = get_coordinates(result, target_string)
+        if confirmx is not None and confirmy is not None:
+            log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
+            # 调用moveclick函数
+            moveclick(disconnect_check_colorXY.x1_coor + confirmx, disconnect_check_colorXY.y2_coor - confirmy,
+                      1, 1)
+            # 找到了坐标，跳出循环
+            break
+
+    # 如果没有找到坐标，则可以根据需要添加处理逻辑
+    if confirmX is None or confirmY is None:
         log.print(f"{now_time()}……///disconnect_confirm()识别函数未识别···")
+
 
 
 def moveclick(x, y, delay=0, click_delay=0):
@@ -1215,60 +1290,54 @@ def reconnect():
     # moveclick(1429, 640, click_delay=1)  # 错误代码5
     # moveclick(1389, 670, click_delay=1)  # 错误代码6
     # moveclick(563, 722, click_delay=1)  # 错误代码7
-    while eq(disconnect_check(), True):
+    while disconnect_check():
         for sum in range(130, 80, -10):
             disconnect_confirm(sum)
-            if eq(disconnect_check(), False):
+            if not disconnect_check():
                 break
-    # 段位重置
-    # if eq(segment_reset(), True):
-    #     moveclick(1462, 841)
+
     # 检测血点，判断断线情况
-    if eq(starthall(), True) or eq(readyhall(), True):  # 小退
+    if starthall() or readyhall():  # 小退
         log.print(f"{now_time()}……///断线重连程度检测·····小退")
         return True
-    elif eq(gameover(), True):  # 意味着不在大厅
+    elif gameover():  # 意味着不在大厅
         moveclick(1761, 1009)
         log.print(f"{now_time()}……///断线重连程度检测·····小退")
         return True
     else:  # 大退
         log.print(f"{now_time()}……///断线重连程度检测·····大退")
+
         main_quit = False
         while main_quit == False:
-            while eq(disconnect_check(), True):
+            while disconnect_check():
                 for sum in range(130, 80, -10):
                     disconnect_confirm(sum)
-                    if eq(disconnect_check(), False):
+                    if not disconnect_check():
                         break
             time.sleep(1)
             moveclick(10, 10, click_delay=1)  # 错误
             #### 活动奖励
-            if eq(news(), True):
+            if news():
                 moveclick(1413, 992, click_delay=1)  # 新闻点击
-            # moveclick(1430, 744, click_delay=1)  # 账号连接
-            # moveclick(1631, 966, click_delay=1)  # 转生系统
-            # if eq(blood_and_ceasma(), True):
-            #     while eq(blood_and_ceasma(), True):
-            #         moveclick(0, 0, 0.5, 1)
-            #         moveclick(1761, 1009, 3, 1)
-            #     return True
+
             # 判断每日祭礼
-            if eq(daily_ritual_main(), True):
+            if daily_ritual_main():
                 moveclick(545, 880, click_delay=1)
             # 判断段位重置
-            if eq(season_reset(), True):
+            if season_reset():
                 moveclick(1468, 843, click_delay=1)
             # 是否重进主页面判断
-            if eq(mainjudge(), True):
+            if mainjudge():
                 moveclick(320, 100, click_delay=1)  # 点击开始
                 # 通过阵营选择判断返回大厅
-                if eq(cfg.getboolean("CPCI", "rb_survivor"), True):
+                if cfg.getboolean("CPCI", "rb_survivor"):
                     moveclick(339, 320)
-                elif eq(cfg.getboolean("CPCI", "rb_killer"), True):
+                elif cfg.getboolean("CPCI", "rb_killer"):
                     moveclick(328, 224)
                 main_quit = True
-            if eq(gameover(), True):
+            if gameover():
                 moveclick(1761, 1009)
+                moveclick(10, 10)  # 避免遮挡
                 main_quit = True
         log.print(f"{now_time()}……///重连完成···")
         return True
@@ -1366,6 +1435,7 @@ def random_veer(veer_time):
 
 def survivor_action():
     """survivor`s action"""
+    key_down(hwnd, 'w')
     key_down(hwnd, 'lshift')
     act_direction = random_direction()
     for i in range(10):
@@ -1377,6 +1447,7 @@ def survivor_action():
     time.sleep(2)
     py.mouseUp(button='left')
     key_up(hwnd, 'lshift')
+    key_up(hwnd, 'w')
 
 
 # def killer_action_skill():
@@ -1513,6 +1584,8 @@ def killer_action():
     elif cfg.getboolean("UPDATE", "rb_english"):
         ctrl_lst = ctrl_lst_en
         need_lst = need_lst_en
+
+    key_down(hwnd, 'w')
     if eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者") or eq(
             custom_select.select_killer_lst[character_num_b - 1], "BLIGHT"):
         key_up(hwnd, 'w')
@@ -1547,10 +1620,12 @@ def killer_action():
         killer_skill()
         if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
             killer_ctrl()
+    key_up(hwnd, 'w')
 
 
 def killer_fixed_act():
     """main blood"""
+    key_down(hwnd, 'w')
     killer_ctrl()
     for i in range(4):
         move_time = round(random.uniform(1.5, 5.0), 3)
@@ -1564,6 +1639,7 @@ def killer_fixed_act():
     py.mouseDown()
     time.sleep(2)
     py.mouseUp()
+    key_up(hwnd, 'w')
 
 
 def back_first():
@@ -1690,7 +1766,7 @@ def character_selection():
 
 
 def afk():
-    global match_stage, ready_stage, end_stage, self_defined_parameter, stop_space, stop_action
+    global stop_space, stop_action
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
     if cfg.getboolean("UPDATE", "rb_chinese"):
         custom_select.select_killer_name_CN()
@@ -1706,7 +1782,7 @@ def afk():
         win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
                             win32con.MB_OK | win32con.MB_ICONWARNING)
         kill()
-    if not custom_select.select_killer_lst and eq(cfg.getboolean("CPCI", "rb_killer"), True):
+    if not custom_select.select_killer_lst and cfg.getboolean("CPCI", "rb_killer"):
         if cfg.getboolean("UPDATE", "rb_chinese"):
             win32api.MessageBox(hwnd, "至少选择一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
             kill()
@@ -1737,7 +1813,7 @@ def afk():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏处于匹配大厅···")
                 # 判断游戏所处的阶段
                 if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    stage_judge()
+                    match_stage = stage_judge()
                     if match_stage != "匹配大厅":
                         log.print(f"{now_time()}……///当前不处于匹配大厅，此功能生效···")
                         break
@@ -1787,13 +1863,13 @@ def afk():
             if ne(match_stage, "匹配大厅"):
                 ready_load = True
         while not ready_load:
-            if eq(readycancle(), False):
+            if not readycancle():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本准备加载阶段结束···")
                 ready_load = True
             log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在准备加载中···")
 
         # 重连返回值的判断
-        if eq(reconnection, True):
+        if reconnection:
             continue
 
         '''
@@ -1804,7 +1880,7 @@ def afk():
         while not ready_room:
             # 判断游戏所处的阶段
             if eq(self_defined_parameter['stage_judge_switch'], 1):
-                stage_judge()
+                ready_stage = stage_judge()
                 if ready_stage != "准备房间":
                     log.print(f"{now_time()}……///当前不处于准备房间，此功能生效···")
                     break
@@ -1859,7 +1935,6 @@ def afk():
         action_time = 0
         while not game:
             action_time += 1
-            key_down(hwnd, 'w')  # 全局W行走
             if gameover():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局已结束···")
                 stop_space = True  # 自动空格线程标志符
@@ -1876,7 +1951,7 @@ def afk():
                 time.sleep(5)
                 # 判断所处的游戏阶段
                 if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    stage_judge()
+                    end_stage = stage_judge()
                     if end_stage != "游戏结束":
                         if match_stage == "匹配大厅" or ready_stage == "准备房间":
                             log.print(f"{now_time()}……///当前不处于游戏结算界面，此功能生效···")
@@ -1904,7 +1979,6 @@ def afk():
                 if disconnect_check():
                     reconnection = reconnect()
                     game = True
-            key_up(hwnd, 'w')
 
         # 重连返回值判断
         if reconnection:
@@ -1953,10 +2027,7 @@ if __name__ == '__main__':
     behind_times = 0  # 不可上升后的循环次数
     x, y = 548, 323  # 初始的坐标值[Second]
     begin_state = False  # 开始状态
-    match_stage = "匹配大厅"  # 阶段判断参数
-    ready_stage = "准备房间"
-    end_stage = "游戏结束"  #
-    disconnect_check_area = 0  # 大退后判断区域状态码
+
     # 角色选择的参数
     ghX = [405, 548, 703, 854]
     ghY = [314, 323, 318, 302]
@@ -1967,6 +2038,7 @@ if __name__ == '__main__':
     circle = 0  # 选择的次数
     frequency = 0  # 换行的次数
     judge = 0
+    pause = False  # 监听暂停标志
     stop_thread = False  # 检查tip标志
     stop_space = False  # 自动空格标志
     stop_action = False  # 执行动作标志
@@ -1976,7 +2048,7 @@ if __name__ == '__main__':
     begingame = threading.Thread(target=afk, daemon=True)
     tip = threading.Thread(target=hall_tip, daemon=True)
     checktip = threading.Thread(target=check_tip)
-    ####-------------------------------------------------------------------------
+
     settings = ConfigObj(CFG_PATH, default_encoding='utf8')
     pytesseract.pytesseract.tesseract_cmd = OCR_PATH  # 配置OCR路径
     # UI设置
@@ -2028,11 +2100,11 @@ if __name__ == '__main__':
     if QLocale.system().language() != QLocale.Chinese or cfg.getboolean("UPDATE", "rb_english"):
         dbd_window.rb_english_change()
     custom_select = CustomSelectKiller()
-    hotkey.start()  # 热键监听
-    authorization()  # 授权验证
     notice()  # 通知消息
+    authorization()  # 授权验证
+    hotkey.start()  # 热键监听
     screen_age()
-    if eq(cfg.getboolean("UPDATE", "cb_autocheck"), True):  # 检查更新
+    if cfg.getboolean("UPDATE", "cb_autocheck"):  # 检查更新
         check_update()
     check_ocr()  # 检查初始化
     notification = TransparentNotification()
