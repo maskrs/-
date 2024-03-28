@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import functools
 import glob
 import os.path
 import random
@@ -9,7 +10,6 @@ import time
 import webbrowser
 from configparser import ConfigParser
 from operator import lt, eq, gt, ge, ne, floordiv, mod
-import psutil
 import pyautogui as py
 import pytesseract
 import re
@@ -27,6 +27,8 @@ from DBDAutoScriptUI import Ui_MainWindow
 from keyboard_operation import key_down, key_up
 from selec_killerUI import Ui_Dialog
 from simpleaudio import WaveObject
+from functools import wraps
+from typing import Callable, List
 
 
 class Coord:
@@ -82,20 +84,29 @@ def begin():
         begin_state = True
         open(LOG_PATH, 'w').close()
         save_cfg()
-        begingame.start()
-        # 如果开启提醒，则开启线程
-        if cfg.getboolean("CPCI", "rb_survivor") and cfg.getboolean("CPCI", "cb_survivor_do"):
-            tip.start()
-    elif cfg.getboolean("UPDATE", "rb_chinese"):
-        win32api.MessageBox(0, "程序已启动，请勿重复点击。", "错误", win32con.MB_OK | win32con.MB_ICONERROR)
-        sys.exit()
-    elif cfg.getboolean("UPDATE", "rb_english"):
-        win32api.MessageBox(0, "The program has been launched, please do not click repeatedly.",
-                            "ERROR", win32con.MB_OK | win32con.MB_ICONERROR)
-        sys.exit()
+        if start_check():
+            # 播放WAV文件
+            play_str.play()
+            event.clear()
+            begingame = threading.Thread(target=afk, daemon=True)
+            begingame.start()
+            # 如果开启提醒，则开启线程
+            if cfg.getboolean("CPCI", "rb_survivor") and cfg.getboolean("CPCI", "cb_survivor_do"):
+                tip.start()
+    else:
+        pass
 
 
 def kill():
+    global begin_state
+    # 播放WAV文件
+    play_end.play()
+    del_jpg()
+    begin_state = False
+    event.set()
+
+
+def del_jpg():
     # 获取当前目录下所有的.jpg文件
     jpg_files = glob.glob('*.jpg')
     # 遍历文件列表并尝试删除每个文件
@@ -107,9 +118,6 @@ def kill():
         except OSError as e:
             # 如果文件正在被其他进程使用，通常会抛出PermissionError
             log.print(f"{now_time()}……//////退出时删除文件时出错: {file} - {e.strerror}")
-
-    log.close()
-    psutil.Process(os.getpid()).kill()
 
 
 class DbdWindow(QMainWindow, Ui_MainWindow):
@@ -715,7 +723,6 @@ def initialize():
         cfg.write(configfile)
 
 
-
 def save_cfg():
     """ 保存配置文件 """
     for section, options in ui_components.items():
@@ -724,6 +731,7 @@ def save_cfg():
         for option_name, ui_control in options.items():
             settings[section][option_name] = ui_control.isChecked()
     settings.write()
+
 
 def read_cfg():
     """读取配置文件"""
@@ -743,7 +751,6 @@ def read_cfg():
     #     dbd_window.main_ui.lb_message.hide()
 
 
-
 def authorization():
     """check the authorization"""
     authorization_now = '~x&amp;mBGbIneqSS('
@@ -761,7 +768,7 @@ def authorization():
 
 def check_update():
     """check the update"""
-    ver_now = 'V5.1.6'
+    ver_now = 'V5.1.7'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -826,7 +833,6 @@ def screen_age():
     log.print(f"{now_time()}-----缩放后的分辨率为：{screen_size}\n")
 
 
-
 def hall_tip():
     """Child thread, survivor hall tip"""
     while True:
@@ -863,7 +869,6 @@ def check_tip():
                           win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
 
 
-
 def autospace():
     """Child thread, auto press space"""
     while not stop_space:
@@ -872,7 +877,6 @@ def autospace():
             time.sleep(5)
         else:
             pass
-
 
 
 def action():
@@ -892,7 +896,7 @@ def action():
             pass
 
 
-def listen_key(pid):
+def listen_key():
     """Hotkey  setting, monitored keyboard input"""
 
     # 定义快捷键组合
@@ -902,35 +906,19 @@ def listen_key(pid):
         'alt+home'
     ]
 
-
-    def execute():
-        # 播放WAV文件
-        play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
-        play_obj.play()
-        kill = psutil.Process(pid)
-
-        def openexe():
-            os.startfile(os.path.join(BASE_DIR, "DBD_AFK_TOOL.exe"))
-
-        open_exe = threading.Thread(target=openexe)
-        open_exe.start()
-        time.sleep(1.5)
-        kill.kill()
-
     def pause():
         global pause
 
         if not pause:
             # 播放WAV文件
-            play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
-            play_obj.play()
+            play_pau.play()
             pause = True
+            pause_event.clear()
         elif pause:
             # 播放WAV文件
-            play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
-            play_obj.play()
+            play_res.play()
             pause = False
-
+            pause_event.set()
         try:
             # 置顶
             win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
@@ -939,16 +927,10 @@ def listen_key(pid):
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    def start():
-        # 播放WAV文件
-        play_obj = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
-        play_obj.play()
-        begin()
-
     try:
-        keyboard.add_hotkey(hotkeys[0], execute)
+        keyboard.add_hotkey(hotkeys[0], kill)
         keyboard.add_hotkey(hotkeys[1], pause)
-        keyboard.add_hotkey(hotkeys[2], start)
+        keyboard.add_hotkey(hotkeys[2], begin)
         # 保持程序运行，监听键盘事件
         keyboard.wait()
     except Exception as e:
@@ -957,6 +939,27 @@ def listen_key(pid):
         # 清理，移除监听
         keyboard.unhook_all_hotkeys()
 
+
+def ocr_range_inspection(range_args: tuple, keywords: List[str],
+                         ocr_func: Callable, x1: int, y1: int, x2: int, y2: int) -> Callable:
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper():
+            for threshold in range(*range_args):
+                # 调用img_ocr函数，传入固定坐标和阈值
+                ocr_result = ocr_func(x1, y1, x2, y2, sum=threshold)
+                log.print(f"{now_time()}……//////识别内容为：\n{ocr_result}\n********************")
+                if any(keyword in ocr_result for keyword in keywords):
+                    log.print(f"{now_time()}……///{func.__name__}()识别函数已识别···")
+                    return True
+            log.print(f"{now_time()}……///{func.__name__}()识别函数未识别···")
+            return False
+
+        return wrapper
+
+    return decorator
+
+
 def img_ocr(x1, y1, x2, y2, sum=128):
     """OCR识别图像，返回字符串
     :return: string"""
@@ -964,7 +967,6 @@ def img_ocr(x1, y1, x2, y2, sum=128):
     ocrXY = Coord(x1, y1, x2, y2)
     ocrXY.processed_coord()
     ocrXY.area_check()
-    screen = QApplication.primaryScreen()
     image = screen.grabWindow(hwnd).toImage()
 
     # 生成唯一的文件名
@@ -991,68 +993,104 @@ def img_ocr(x1, y1, x2, y2, sum=128):
         # 使用Tesseract OCR引擎识别图像中的文本
         result = pytesseract.image_to_string(ocr_image, config=custom_config, lang=lan)
         result = "".join(result.split())
-    try:
-        os.remove(filename)  # 移除图像文件
-    except Exception as e:
-        log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
+    time.sleep(0.5)  # 确保文件关闭
+    if os.path.exists(filename):
+        try:
+            os.remove(filename)  # 尝试删除文件
+        except Exception as e:
+            log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
+    else:
+        log.print(f"{now_time()}……//////ocr检索删除文件时出错: 文件不存在 - {filename}")
+
     return result
 
 
-def starthall():
+@ocr_range_inspection((130, 80, -10), ["开始游戏", "PLAY"],
+                      img_ocr, 1446, 771, 1920, 1080)
+def starthall() -> bool:
     """check the start  hall
     :return: bool"""
-    log.print(f"{now_time()}……///starthall()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(1446, 771, 1920, 1080, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "开始游戏" in ocr or "PLAY" in ocr:
-            log.print(f"{now_time()}……///starthall()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///starthall()识别函数未识别···")
-    return False
+    pass
 
 
-def readyhall():
+@ocr_range_inspection((130, 80, -10), ["准备就绪", "READY"],
+                      img_ocr, 1446, 771, 1920, 1080)
+def readyhall() -> bool:
     """check the  ready hall
     :return: bool"""
-    log.print(f"{now_time()}……///readyhall()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(1446, 771, 1920, 1080, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "准备就绪" in ocr or "READY" in ocr:
-            log.print(f"{now_time()}……///readyhall()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///readyhall()识别函数未识别···")
-    return False
+    pass
 
 
-def readycancle():
+@ocr_range_inspection((120, 50, -10), ["取消", "CANCEL"], img_ocr, 1446, 771, 1920, 1080)
+def readycancle() -> bool:
     """检查游戏准备后的取消，消失就进入对局加载
     :return: bool"""
-    log.print(f"{now_time()}……///readycancle()识别函数识别中···")
-    for sum in range(120, 50, -10):
-        ocr = img_ocr(1446, 771, 1920, 1080, sum)  # 80
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "取消" in ocr or "CANCEL" in ocr:
-            log.print(f"{now_time()}……///readycancle()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///readycancle()识别函数未识别···")
-    return False
+    pass
 
 
-def gameover():
+@ocr_range_inspection((130, 50, -10), ["比赛", "得分", "MATCH", "SCORE"],
+                      img_ocr, 56, 46, 370, 172)
+def gameover() -> bool:
     """检查对局后的继续
     :return: bool"""
-    log.print(f"{now_time()}……///gameover()识别函数识别中···")
-    for sum in range(130, 50, -10):
-        ocr = img_ocr(56,46,370,172, sum)  # 70
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        # ocr2 = img_ocr(1745, 991, 1820, 1028, 30)
-        if "比赛" in ocr or "MATCH" in ocr:
-            log.print(f"{now_time()}……///gameover()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///gameover()识别函数未识别···")
-    return False
+    pass
+
+
+# def starthall() -> bool:
+#     """check the start  hall
+#     :return: bool"""
+#     log.print(f"{now_time()}……///starthall()识别函数识别中···")
+#     for sum in range(130, 80, -10):
+#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
+#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
+#         if "开始游戏" in ocr or "PLAY" in ocr:
+#             log.print(f"{now_time()}……///starthall()识别函数已识别···")
+#             return True
+#     log.print(f"{now_time()}……///starthall()识别函数未识别···")
+#     return False
+#
+#
+# def readyhall() -> bool:
+#     """check the  ready hall
+#     :return: bool"""
+#     log.print(f"{now_time()}……///readyhall()识别函数识别中···")
+#     for sum in range(130, 80, -10):
+#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
+#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
+#         if "准备就绪" in ocr or "READY" in ocr:
+#             log.print(f"{now_time()}……///readyhall()识别函数已识别···")
+#             return True
+#     log.print(f"{now_time()}……///readyhall()识别函数未识别···")
+#     return False
+#
+#
+# def readycancle() -> bool:
+#     """检查游戏准备后的取消，消失就进入对局加载
+#     :return: bool"""
+#     log.print(f"{now_time()}……///readycancle()识别函数识别中···")
+#     for sum in range(120, 50, -10):
+#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
+#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
+#         if "取消" in ocr or "CANCEL" in ocr:
+#             log.print(f"{now_time()}……///readycancle()识别函数已识别···")
+#             return True
+#     log.print(f"{now_time()}……///readycancle()识别函数未识别···")
+#     return False
+#
+#
+# def gameover() -> bool:
+#     """检查对局后的继续
+#     :return: bool"""
+#     log.print(f"{now_time()}……///gameover()识别函数识别中···")
+#     for sum in range(130, 50, -10):
+#         ocr = img_ocr(56, 46, 370, 172, sum)  # 70
+#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
+#         # ocr2 = img_ocr(1745, 991, 1820, 1028, 30)
+#         if "比赛" in ocr or "得分" in ocr or "MATCH" in ocr or "SCORE" in ocr:
+#             log.print(f"{now_time()}……///gameover()识别函数已识别···")
+#             return True
+#     log.print(f"{now_time()}……///gameover()识别函数未识别···")
+#     return False
 
 
 def stage_judge():
@@ -1064,9 +1102,6 @@ def stage_judge():
         return stage
     elif readyhall():
         stage = "准备房间"
-        return stage
-    elif gameover():
-        stage = "游戏结束"
         return stage
     else:
         return None
@@ -1081,22 +1116,17 @@ def now_time():
     return otherStyleTime
 
 
-def rites():
+@ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"],
+                      img_ocr, 106, 267, 430, 339)
+def rites() -> bool:
     """check rites complete
     :return:bool"""
-    log.print(f"{now_time()}……///rites()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(106, 267, 430, 339, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
-            log.print(f"{now_time()}……///rites()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///rites()识别函数未识别···")
-    return False
+    pass
 
 
+# @ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"])
 # 检测活动奖励  #####未完成
-def event_rewards():
+def event_rewards() -> bool:
     """check the event rewards
     :return: bool"""
     eventXY = Coord(1864, 455, 1920, 491)
@@ -1104,82 +1134,50 @@ def event_rewards():
     eventXY.area_check()
 
 
-def season_reset():
+@ocr_range_inspection((130, 80, -10), ["重置", "RESET"], img_ocr, 192, 194, 426, 291)
+def season_reset() -> bool:
     """check the season reset
     :return: bool"""
-    log.print(f"{now_time()}……///season_reset()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(192, 194, 426, 291, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "重置" in ocr or "RESET" in ocr:
-            log.print(f"{now_time()}……///season_reset()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///season_reset()识别函数未识别···")
-    return False
+    pass
 
 
-def daily_ritual_main():
+@ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"],
+                      img_ocr, 441, 255, 666, 343)
+def daily_ritual_main() -> bool:
     """check the daily task after serious disconnect -->[main]
     :return: bool
     """
-    log.print(f"{now_time()}……///daily_ritual_main()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(441, 255, 666, 343, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "每日祭礼" in ocr or "DAILY RITUALS" in ocr:
-            log.print(f"{now_time()}……///daily_ritual_main()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///daily_ritual_main()识别函数未识别···")
-    return False
+    pass
 
 
-def mainjudge():
+@ocr_range_inspection((130, 80, -10), ["商城", "STORE"], img_ocr, 77, 266, 400, 386)
+def mainjudge() -> bool:
     """after serious disconnect.
     check the game whether return the main menu. -->[quit button]
     :return: bool
     """
-    log.print(f"{now_time()}……///mainjudge()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(77, 266, 400, 386, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "商城" in ocr or "STORE" in ocr:
-            log.print(f"{now_time()}……///mainjudge()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///mainjudge()识别函数未识别···")
-    return False
+    pass
 
 
-def disconnect_check():
+@ocr_range_inspection((130, 80, -10), ["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
+                      img_ocr, 299, 614, 1796, 800)
+def disconnect_check() -> bool:
     """After disconnect check the connection status
     :return: bool"""
-    log.print(f"{now_time()}……///断线重连检测···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(299, 614, 1796, 800, sum)  # 110
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "好的" in ocr or "关闭" in ocr or "OK" in ocr or "CLOSE" in ocr or "继续" in ocr or "CONTINUE" in ocr:
-            log.print(f"{now_time()}……///断线重连检测，已断线。")
-            return True
-    log.print(f"{now_time()}……///断线重连检测，未断线。")
-    return False
+    pass
 
 
-def news():
+@ocr_range_inspection((130, 80, -10), ["新内容", "NEW CONTENT"],
+                      img_ocr, 548, 4, 1476, 256)
+def news() -> bool:
     """断线重连后的新闻
     :return: bool"""
-    log.print(f"{now_time()}……///news()识别函数识别中···")
-    for sum in range(130, 80, -10):
-        ocr = img_ocr(548, 4, 1476, 256, sum)
-        log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-        if "新内容" in ocr or "NEW CONTENT" in ocr:
-            log.print(f"{now_time()}……///news()识别函数已识别···")
-            return True
-    log.print(f"{now_time()}……///news()识别函数未识别···")
-    return False
+    pass
 
 
-def disconnect_confirm(sum=120):
-    """After disconnection click confirm button. not need process.
-    :return: int"""
+def disconnect_confirm(sum=120) -> None:
+    """After disconnection click confirm button. not need process."""
+
     # 定义局部函数，用于获取按钮坐标
     def get_coordinates(result, target_string):
         if target_string in result:
@@ -1206,7 +1204,7 @@ def disconnect_confirm(sum=120):
     # 打开图像文件并裁剪、二值化
     with Image.open(filename) as img:
         cropped = img.crop((disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor,
-                        disconnect_check_colorXY.x2_coor, disconnect_check_colorXY.y2_coor))
+                            disconnect_check_colorXY.x2_coor, disconnect_check_colorXY.y2_coor))
         grayscale_image = cropped.convert('L')
         binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
         binary_image.save(filename)  # 保存二值化后的图像到相同的文件
@@ -1224,13 +1222,7 @@ def disconnect_confirm(sum=120):
         result = pytesseract.image_to_boxes(ocr_image, config=custom_config, lang=lan)
         result = result.split(' ')
 
-    try:
-        os.remove(filename)  # 移除图像文件
-    except Exception as e:
-        log.print(f"{now_time()}……//////离线确认删除文件时出错: {filename} - {e}")
-
     log.print(f"{now_time()}……//////识别内容为：\n{result}\n********************")
-
 
     # 定义需要查找的字符串列表
     target_strings = ["好", "关", "继", "O", "C"]
@@ -1253,9 +1245,16 @@ def disconnect_confirm(sum=120):
     if confirmX is None or confirmY is None:
         log.print(f"{now_time()}……///disconnect_confirm()识别函数未识别···")
 
+    if os.path.exists(filename):
+        try:
+            os.remove(filename)  # 尝试删除文件
+        except Exception as e:
+            log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
+    else:
+        log.print(f"{now_time()}……//////ocr检索删除文件时出错: 文件不存在 - {filename}")
 
 
-def moveclick(x, y, delay=0, click_delay=0):
+def moveclick(x, y, delay=0, click_delay=0) -> None:
     """mouse move to a true place and click """
     coorXY = Coord(x, y)
     coorXY.processed_coord()
@@ -1266,7 +1265,7 @@ def moveclick(x, y, delay=0, click_delay=0):
     time.sleep(click_delay)
 
 
-def auto_message():
+def auto_message() -> None:
     """对局结束后的自动留言"""
     py.write(self_defined_parameter['message'])
     py.press('space')
@@ -1274,7 +1273,7 @@ def auto_message():
     time.sleep(0.5)
 
 
-def reconnect():
+def reconnect() -> bool:
     """Determine whether the peer is disconnected and return to the matching hall
     :return: bool -->TRUE
     """
@@ -1309,6 +1308,10 @@ def reconnect():
 
         main_quit = False
         while main_quit == False:
+            if event.is_set():
+                return True
+            if not pause_event.is_set():
+                pause_event.wait()
             while disconnect_check():
                 for sum in range(130, 80, -10):
                     disconnect_confirm(sum)
@@ -1343,7 +1346,7 @@ def reconnect():
         return True
 
 
-def random_movement():
+def random_movement() -> str:
     """通过随机数取得移动的方向
     :return: str
     """
@@ -1358,7 +1361,7 @@ def random_movement():
         return 's'
 
 
-def random_direction():
+def random_direction() -> str:
     """随机旋转方向
     :return: str
     """
@@ -1369,21 +1372,21 @@ def random_direction():
         return 'e'
 
 
-def random_movetime():
+def random_movetime() -> float:
     """get the character random move time in the game
     :return: float"""
     rn = round(random.uniform(1.1, 2.0), 3)  # 0.5 1.5
     return rn
 
 
-def random_veertime():
+def random_veertime() -> float:
     """get the character random veer time
     :return: float"""
     rn = round(random.uniform(0.275, 0.4), 3)  # 0.6
     return rn
 
 
-def random_move(move_time):
+def random_move(move_time) -> None:
     """行走动作"""
     act_move = random_movement()
     key_down(hwnd, act_move)
@@ -1391,7 +1394,7 @@ def random_move(move_time):
     key_up(hwnd, act_move)
 
 
-def random_veer(veer_time):
+def random_veer(veer_time) -> None:
     """旋转动作"""
     act_direction = random_direction()
     key_down(hwnd, act_direction)
@@ -1433,7 +1436,7 @@ def random_veer(veer_time):
 #     else:
 #         return False
 
-def survivor_action():
+def survivor_action() -> None:
     """survivor`s action"""
     key_down(hwnd, 'w')
     key_down(hwnd, 'lshift')
@@ -1450,105 +1453,13 @@ def survivor_action():
     key_up(hwnd, 'w')
 
 
-# def killer_action_skill():
-#     """killer`s skill action"""
-#     random_number = random.sample(range(1, 6), 5)
-#     act_direction = random_direction()
-#     act_direction_judge = False
-#     rn = random.randint(1, 1000)
-#     if 1 <= rn <= 25:
-#         act_move = random_movement()
-#         key_down(hwnd, act_move)
-#         key_down(hwnd, act_direction)
-#         act_direction_judge = True
-#     else:
-#         act_move = random_movement()
-#         key_down(hwnd, act_move)
-#     time.sleep(0.2)
-#     # 力量
-#     ctrl_lst = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人"]
-#     if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
-#         if eq(random_number[0], 1) or eq(random_number[0], 2) or eq(random_number[0], 3):
-#         # rn = random.randint(1, 200)
-#         # if 100 < rn <= 175:
-#             key_down(hwnd, 'lcontrol')
-#             time.sleep(4.3)
-#             key_up(hwnd, 'lcontrol')
-#     if act_direction_judge:
-#         key_up(hwnd, act_direction)
-#     key_up(hwnd, act_move)
-#     # 技能[右键左键]
-#     need_lst = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者"]
-#     if custom_select.select_killer_lst[character_num_b - 1] in need_lst:
-#         if eq(random_number[1], 2) or eq(random_number[1], 1) or eq(random_number[1], 3):
-#         # rn = random.randint(1, 1000)
-#         # if 1 <= rn <= 25:
-#             act_move = random_movement()
-#             key_down(hwnd, act_move)
-#             veertime = round(random.uniform(0.3, 0.6), 3)
-#             random_veer(veertime)
-#         elif eq(random_number[2], 3):
-#             act_move = random_movement()
-#             key_down(hwnd, act_move)
-#             random_veer(random_veertime())
-#         if eq(random_number[3], 4) or eq(random_number[3], 3) or eq(random_number[3], 2):
-#             py.mouseDown(button='right')
-#             rn = random.randint(1, 10)
-#             if rn >= 7:
-#                 random_veer(random_veertime())
-#             time.sleep(3.5)
-#             py.mouseDown()
-#             py.mouseUp()
-#             py.mouseUp(button='right')
-#             time.sleep(2.0)
-#         random_veer(random_veertime())
-#         rn = random.randint(1, 1000)
-#         if 1 <= rn <= 850:
-#             key_down(hwnd, 'lcontrol')
-#             key_up(hwnd, 'lcontrol')
-#             key_down(hwnd, 'lcontrol')
-#             key_up(hwnd, 'lcontrol')
-#         key_up(hwnd, act_move)
-#     elif eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者"):
-#         for i in range(5):
-#             act_move = random_movement()
-#             key_down(hwnd, act_move)
-#             act_direction = random_direction()
-#             py.mouseDown(button='right')
-#             py.mouseUp(button='right')
-#             time.sleep(0.7)
-#             key_down(hwnd, act_direction)
-#             time.sleep(0.3)
-#             key_up(hwnd, act_direction)
-#             key_up(hwnd, act_move)
-#     else:
-#         # 技能[右键]
-#         for i in range(1):
-#             move_time = round(random.uniform(1.5, 5.0), 3)
-#             random_move(move_time)
-#             veertime = round(random.uniform(0.285, 0.6), 3)
-#             random_veer(veertime)
-#         act_move_1 = random_movement()
-#         act_move_2 = random_movement()
-#         key_down(hwnd, act_move_1)
-#         key_down(hwnd, act_move_2)
-#         time.sleep(1.5)
-#         py.mouseDown(button='right')
-#         time.sleep(1)
-#         key_down(hwnd, 'lcontrol')
-#         key_up(hwnd, 'lcontrol')
-#         py.mouseUp(button='right')
-#         key_up(hwnd, act_move_1)
-#         key_up(hwnd, act_move_2)
-#         random_move(3)
-
-def killer_ctrl():
+def killer_ctrl() -> None:
     key_down(hwnd, 'lcontrol')
     time.sleep(4.3)
     key_up(hwnd, 'lcontrol')
 
 
-def killer_skillclick():
+def killer_skillclick() -> None:
     py.mouseDown(button='right')
     time.sleep(3)
     py.mouseDown()
@@ -1559,7 +1470,7 @@ def killer_skillclick():
     key_up(hwnd, 'lcontrol')
 
 
-def killer_skill():
+def killer_skill() -> None:
     py.mouseDown(button='right')
     time.sleep(3)
     key_down(hwnd, 'lcontrol')
@@ -1567,7 +1478,7 @@ def killer_skill():
     py.mouseUp(button='right')
 
 
-def killer_action():
+def killer_action() -> None:
     """killer integral action"""
     ctrl_lst_cn = ["医生", "梦魇", "小丑", "魔王", "连体婴", "影魔", "白骨商人", "好孩子", "未知恶物"]
     need_lst_cn = ["门徒", "魔王", "死亡枪手", "骗术师", "NEMESIS", "地狱修士", "艺术家", "影魔", "奇点", "操纵者",
@@ -1584,10 +1495,15 @@ def killer_action():
     elif cfg.getboolean("UPDATE", "rb_english"):
         ctrl_lst = ctrl_lst_en
         need_lst = need_lst_en
-
+    # 防止下标越界
+    killer_num = len(custom_select.select_killer_lst)
+    if ge(character_num_b - 1, 0):
+        killer_num = character_num_b - 1
+    else:
+        killer_num -= 1
     key_down(hwnd, 'w')
-    if eq(custom_select.select_killer_lst[character_num_b - 1], "枯萎者") or eq(
-            custom_select.select_killer_lst[character_num_b - 1], "BLIGHT"):
+    if eq(custom_select.select_killer_lst[killer_num], "枯萎者") or eq(
+            custom_select.select_killer_lst[killer_num], "BLIGHT"):
         key_up(hwnd, 'w')
         for i in range(5):
             act_move = random_movement()
@@ -1600,7 +1516,7 @@ def killer_action():
             time.sleep(0.3)
             key_up(hwnd, act_direction)
             key_up(hwnd, act_move)
-    elif custom_select.select_killer_lst[character_num_b - 1] in need_lst:
+    elif custom_select.select_killer_lst[killer_num] in need_lst:
         act_direction = random_direction()
         for i in range(10):
             key_down(hwnd, act_direction)
@@ -1608,7 +1524,7 @@ def killer_action():
             key_up(hwnd, act_direction)
             time.sleep(0.7)
         killer_skillclick()
-        if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+        if custom_select.select_killer_lst[killer_num] in ctrl_lst:
             killer_ctrl()
     else:
         act_direction = random_direction()
@@ -1618,12 +1534,12 @@ def killer_action():
             key_up(hwnd, act_direction)
             time.sleep(0.7)
         killer_skill()
-        if custom_select.select_killer_lst[character_num_b - 1] in ctrl_lst:
+        if custom_select.select_killer_lst[killer_num] in ctrl_lst:
             killer_ctrl()
     key_up(hwnd, 'w')
 
 
-def killer_fixed_act():
+def killer_fixed_act() -> None:
     """main blood"""
     key_down(hwnd, 'w')
     killer_ctrl()
@@ -1642,73 +1558,23 @@ def killer_fixed_act():
     key_up(hwnd, 'w')
 
 
-def back_first():
+def back_first() -> None:
     """click back the first character"""
     wheelcoord = Coord(404, 536)
     wheelcoord.processed_coord()
     wheelcoord.area_check()
     # 回到最开始,需要几次就回滚几次
     py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
-    py.sleep(0.5)
-    py.scroll(1)  # 1
-    py.sleep(0.5)
-    py.scroll(1)  # 2
-    py.sleep(0.5)
-    py.scroll(1)  # 3
+    for i in range(3):  # 3
+        py.sleep(0.5)
+        py.scroll(1)
     moveclick(405, 314, 1.5)
 
 
-# def character_rotation():
-#     '''全角色轮转和单行轮转'''
-#     global click_times, max_click, front_times, behind_times, click_times, x, y, input_num
-#
-#     py.sleep(1)
-#     moveclick(1, 1, 1, 1)
-#     moveclick(141, 109, 1, 1)  # 角色按钮
-#     if eq(click_times, input_num):  # num 为 用户输入的轮换值
-#         max_click = 0
-#         front_times = 0
-#         behind_times = 0
-#         click_times = 1
-#         if ne(input_num, 4):  # 为4 则是单行轮转
-#             back_first()
-#         moveclick(405, 314, 1.5)
-#     if eq(max_click, 6):  ## 最大的换行次数
-#         if lt(behind_times, 3):
-#             if eq(behind_times, 0):
-#                 x, y = 548, 517  # 最后七个第一个
-#             moveclick(x, y, 1.5)
-#             x += 155
-#             behind_times += 1
-#             click_times += 1
-#         elif lt(behind_times, 5):  ##最后剩几个就是几个
-#             if eq(behind_times, 3):
-#                 x, y = 384, 753  # 最后七个第四个
-#             moveclick(x, y, 1.5)
-#             x += 155
-#             behind_times += 1
-#             click_times += 1
-#     else:
-#         if eq(front_times, 0):
-#             front_times += 1
-#         elif lt(front_times, 4):
-#             if eq(front_times, 1):
-#                 x, y = 548, 323  # 第二个
-#             moveclick(x, y, 1.5)
-#             x += 155
-#             front_times += 1
-#             click_times += 1
-#         elif gt(front_times, 3):
-#             x, y = 404, 536  # 第五个
-#             moveclick(x, y, 1.5)
-#             front_times = 1
-#             max_click += 1
-#             click_times += 1
 
-
-def character_selection():
+def character_selection() -> None:
     """自选特定的角色轮转"""
-    global ghX, ghY, glX, glY, character_num, character_num_b, circle, frequency, judge
+    global character_num_b, circle, frequency, judge, character_num
     if eq(judge, 0):
         custom_select.read_search_killer_name()
         custom_select.match_select_killer_name()
@@ -1716,6 +1582,7 @@ def character_selection():
         judge = 1
     py.sleep(1)
     moveclick(10, 10, 1, 1)
+    time.sleep(1)
     moveclick(141, 109, 1, 1)  # 角色按钮
     timey = floordiv(character_num[character_num_b], 4)  # 取整
     timex = mod(character_num[character_num_b], 4)  # 取余
@@ -1765,48 +1632,55 @@ def character_selection():
             character_num_b = 0
 
 
-def afk():
-    global stop_space, stop_action
+def start_check() -> bool:
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
     if cfg.getboolean("UPDATE", "rb_chinese"):
         custom_select.select_killer_name_CN()
     elif cfg.getboolean("UPDATE", "rb_english"):
         custom_select.select_killer_name_EN()
-    list_number = len(custom_select.select_killer_lst)
     # 判断游戏是否运行
     if eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_chinese"):
         win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示",
                             win32con.MB_OK | win32con.MB_ICONWARNING)
-        kill()
+        return False
     elif eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_english"):
         win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
                             win32con.MB_OK | win32con.MB_ICONWARNING)
-        kill()
+        return False
     if not custom_select.select_killer_lst and cfg.getboolean("CPCI", "rb_killer"):
         if cfg.getboolean("UPDATE", "rb_chinese"):
             win32api.MessageBox(hwnd, "至少选择一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
-            kill()
+            return False
         elif cfg.getboolean("UPDATE", "rb_english"):
             win32api.MessageBox(hwnd, "Choose at least one killer.", "Tip",
                                 win32con.MB_OK | win32con.MB_ICONASTERISK)
-            kill()
+            return False
+    moveclick(10, 10)
+    log.print(f"{now_time()}---启动脚本····")
+    return True
 
+
+def afk() -> None:
+    global stop_space, stop_action, character_num_b, judge
+    list_number = len(custom_select.select_killer_lst)
+    circulate_number = 0
     # 置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-    moveclick(10, 10)
-    log.print(f"{now_time()}---启动脚本····")
-    circulate_number = 0
     while True:
         reconnection = False
         circulate_number += 1
         '''
         匹配
-
         '''
         matching = False
         while not matching:
+            if event.is_set():
+                break
+            if not pause_event.is_set():
+                pause_event.wait()
+
             log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于匹配阶段···")
             # 判断条件是否成立
             if starthall():
@@ -1818,26 +1692,22 @@ def afk():
                         log.print(f"{now_time()}……///当前不处于匹配大厅，此功能生效···")
                         break
 
-                """
-                在这里判断选择的模式，并从前台提取数值。
-                挂机模式 值 = 轮换 则再判断为哪种模式；如果值 = 固定 则等待time
-                再判断插件是否为0，@@插件已废弃
-                """
-
                 if cfg.getboolean("CPCI", "rb_killer"):
                     time.sleep(1)
                     if eq(list_number, 1):
-                        if (custom_select.match_select_killer_lst
-                                not in custom_select.select_killer_lst):  # 当前选择的角色不在列表中时，增加到列表中
-                            custom_select.select_killer_lst.extend(custom_select.match_select_killer_lst)
                         list_number = 0
                         time.sleep(1)
                     elif gt(list_number, 1):
                         character_selection()
+                        print(custom_select.select_killer_lst, custom_select.match_select_killer_lst)
                 elif cfg.getboolean("CPCI", "rb_survivor"):
                     time.sleep(1)
                 # 进行准备
                 while starthall():  # debug:True -->False
+                    if event.is_set():
+                        break
+                    if not pause_event.is_set():
+                        pause_event.wait()
                     moveclick(1742, 931, 1, 0.5)  # 处理坐标，开始匹配
                     log.print(f"{now_time()}---第{circulate_number}次脚本循环---处于匹配大厅，处理坐标，开始匹配···")
                     moveclick(20, 689, 1.5)  # 商城上空白
@@ -1853,24 +1723,25 @@ def afk():
         # 重连返回值的判断
         if reconnection:
             continue
+
         '''
         准备加载
         '''
         ready_load = False  # debug:False -->True
         log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备加载阶段···")
-        # 检测游戏所在阶段
-        if eq(self_defined_parameter['stage_judge_switch'], 1):
-            if ne(match_stage, "匹配大厅"):
-                ready_load = True
+        # # 检测游戏所在阶段
+        # if eq(self_defined_parameter['stage_judge_switch'], 1):
+        #     if ne(match_stage, "匹配大厅"):
+        #         ready_load = True
         while not ready_load:
+            if event.is_set():
+                break
+            if not pause_event.is_set():
+                pause_event.wait()
             if not readycancle():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本准备加载阶段结束···")
                 ready_load = True
             log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在准备加载中···")
-
-        # 重连返回值的判断
-        if reconnection:
-            continue
 
         '''
         准备
@@ -1878,6 +1749,10 @@ def afk():
         ready_room = False  # debug:False -->True
         log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备阶段···")
         while not ready_room:
+            if event.is_set():
+                break
+            if not pause_event.is_set():
+                pause_event.wait()
             # 判断游戏所处的阶段
             if eq(self_defined_parameter['stage_judge_switch'], 1):
                 ready_stage = stage_judge()
@@ -1906,20 +1781,20 @@ def afk():
 
         game_load = False
         log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局载入阶段···")
-        # 检测游戏所在阶段
-        if eq(self_defined_parameter['stage_judge_switch'], 1):
-            if ne(ready_stage, "准备房间"):
-                game_load = True
+        # # 检测游戏所在阶段
+        # if eq(self_defined_parameter['stage_judge_switch'], 1):
+        #     if ne(ready_stage, "准备房间"):
+        #         game_load = True
         while not game_load:
+            if event.is_set():
+                break
+            if not pause_event.is_set():
+                pause_event.wait()
             if not readycancle():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备加载阶段···")
                 game_load = True
                 time.sleep(5)
             log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局正在载入中···")
-
-        # 重连返回值判断
-        if reconnection:
-            continue
 
         '''
         局内与局后
@@ -1934,7 +1809,20 @@ def afk():
         log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局动作执行阶段···")
         action_time = 0
         while not game:
+            if event.is_set():
+                break
+            if not pause_event.is_set():
+                pause_event.wait()
             action_time += 1
+            # 判断所处的游戏阶段
+            if eq(self_defined_parameter['stage_judge_switch'], 1):
+                end_stage = stage_judge()
+                if end_stage == "匹配大厅" or end_stage == "准备房间":
+                    stop_space = True  # 自动空格线程标志符
+                    stop_action = True  # 动作线程标志符
+                    log.print(f"{now_time()}……///当前不处于游戏结算界面，纠察系统生效···")
+                    break
+
             if gameover():
                 log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局已结束···")
                 stop_space = True  # 自动空格线程标志符
@@ -1949,15 +1837,7 @@ def afk():
                     moveclick(396, 718, 0.5, 1)
                     moveclick(140, 880)
                 time.sleep(5)
-                # 判断所处的游戏阶段
-                if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    end_stage = stage_judge()
-                    if end_stage != "游戏结束":
-                        if match_stage == "匹配大厅" or ready_stage == "准备房间":
-                            log.print(f"{now_time()}……///当前不处于游戏结算界面，此功能生效···")
-                            break
-                        else:
-                            continue
+
                 # 删除动作线程的输入字符
                 py.press('enter')
                 py.hotkey('ctrl', 'a')
@@ -1984,6 +1864,15 @@ def afk():
         if reconnection:
             continue
 
+        if event.is_set():
+            stop_space = True  # 自动空格线程标志符
+            stop_action = True  # 动作线程标志符
+            character_num_b = 0  # 列表的下标归零
+            judge = 0
+            custom_select.select_killer_lst.clear()
+            custom_select.match_select_killer_lst.clear()
+            return
+
 
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -2001,7 +1890,7 @@ if __name__ == '__main__':
     TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
     LOG_PATH = os.path.join(BASE_DIR, "debug_data.log")
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
-    # namelist, switch, message, agrs
+    # 自定义参数
     self_defined_parameter = {'killer_number': 35, 'message': 'GG',
                               'all_killer_name_CN': ["设陷者顽皮熊", "幽灵", "农场主", "折士", "女猎手",
                                                      "迈克尔.迈尔斯迈克尔·迈尔斯迈克尔\'迈尔斯",
@@ -2011,7 +1900,8 @@ if __name__ == '__main__':
                                                      "魔王", "鬼武士",
                                                      "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS",
                                                      "地狱修士", "艺术家",
-                                                     "贞子页子", "影广影魔", "操纵者", "恶骑士", "白骨商人", "奇点", "异形",
+                                                     "贞子页子", "影广影魔", "操纵者", "恶骑士", "白骨商人", "奇点",
+                                                     "异形",
                                                      "好孩子", "未知恶物"],
                               'all_killer_name_EN': ["TRAPPER", "WRAITH", "HILLBILLY", "NURSE", "HUNTRESS", "SHAPE",
                                                      "HAG", "DOCTOR",
@@ -2021,36 +1911,7 @@ if __name__ == '__main__':
                                                      "NEMESIS", "CENOBITE", "ARTIST", "ONRYO",
                                                      "DREDGE", "MASTERMIND", "KNIGHT", "SKULLMERCHANT", "SINGULARITY",
                                                      "XENOMORPH", "GOODGUY", "UNKNOWN"],
-                              'stage_judge_switch': 0}
-    max_click = 0  # 最少点几次不会上升
-    front_times = 0  # 可上升部分的循环次数
-    behind_times = 0  # 不可上升后的循环次数
-    x, y = 548, 323  # 初始的坐标值[Second]
-    begin_state = False  # 开始状态
-
-    # 角色选择的参数
-    ghX = [405, 548, 703, 854]
-    ghY = [314, 323, 318, 302]
-    glX = [549, 709, 858, 384, 556, 715, 882]
-    glY = [517, 528, 523, 753, 741, 749, 750]
-    character_num = []  # 列表，表示选择的角色序号
-    character_num_b = 0  # 列表的下标
-    circle = 0  # 选择的次数
-    frequency = 0  # 换行的次数
-    judge = 0
-    pause = False  # 监听暂停标志
-    stop_thread = False  # 检查tip标志
-    stop_space = False  # 自动空格标志
-    stop_action = False  # 执行动作标志
-    main_pid = os.getpid()
-    # 创建子线程
-    hotkey = threading.Thread(target=listen_key, args=(main_pid,), daemon=True)  # args=(os.getpid(),)
-    begingame = threading.Thread(target=afk, daemon=True)
-    tip = threading.Thread(target=hall_tip, daemon=True)
-    checktip = threading.Thread(target=check_tip)
-
-    settings = ConfigObj(CFG_PATH, default_encoding='utf8')
-    pytesseract.pytesseract.tesseract_cmd = OCR_PATH  # 配置OCR路径
+                              'stage_judge_switch': 0}  # 阶段判断开关
     # UI设置
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
@@ -2099,7 +1960,42 @@ if __name__ == '__main__':
     read_cfg()
     if QLocale.system().language() != QLocale.Chinese or cfg.getboolean("UPDATE", "rb_english"):
         dbd_window.rb_english_change()
+    play_str = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
+    play_pau = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
+    play_res = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
+    play_end = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
     custom_select = CustomSelectKiller()
+    screen = QApplication.primaryScreen()
+    # max_click = 0  # 最少点几次不会上升
+    # front_times = 0  # 可上升部分的循环次数
+    # behind_times = 0  # 不可上升后的循环次数
+    # x, y = 548, 323  # 初始的坐标值[Second]
+    begin_state = False  # 开始状态
+    # 角色选择的参数
+    ghX = [405, 548, 703, 854]
+    ghY = [314, 323, 318, 302]
+    glX = [549, 709, 858, 384, 556, 715, 882]
+    glY = [517, 528, 523, 753, 741, 749, 750]
+    character_num_b = 0  # 列表的下标
+    character_num = []  # 列表，表示选择的角色序号
+    judge = 0
+    circle = 0  # 选择的次数
+    frequency = 0  # 换行的次数
+    pause = False  # 监听暂停标志
+    stop_thread = False  # 检查tip标志
+    stop_space = False  # 自动空格标志
+    stop_action = False  # 执行动作标志
+    # 创建子线程
+    event = threading.Event()
+    event.set()
+    pause_event = threading.Event()
+    pause_event.set()
+    hotkey = threading.Thread(target=listen_key, daemon=True)
+    tip = threading.Thread(target=hall_tip, daemon=True)
+    checktip = threading.Thread(target=check_tip)
+    settings = ConfigObj(CFG_PATH, default_encoding='utf8')
+    pytesseract.pytesseract.tesseract_cmd = OCR_PATH  # 配置OCR路径
+
     notice()  # 通知消息
     authorization()  # 授权验证
     hotkey.start()  # 热键监听
@@ -2109,4 +2005,4 @@ if __name__ == '__main__':
     check_ocr()  # 检查初始化
     notification = TransparentNotification()
     dbd_window.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())

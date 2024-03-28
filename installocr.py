@@ -108,23 +108,26 @@ def manual_download():
         input("\nPress any key to exit...")
         sys.exit()
 
+def main():
+    print("""
+            ____  ____  ____       ___    ________ __    __________  ____  __
+           / __ \/ __ )/ __ \     /   |  / ____/ //_/   /_  __/ __ \/ __ \/ /
+          / / / / __  / / / /    / /| | / /_  / ,<       / / / / / / / / / /
+         / /_/ / /_/ / /_/ /    / ___ |/ __/ / /| |     / / / /_/ / /_/ / /___
+        /_____/_____/_____/____/_/  |_/_/   /_/ |_|____/_/  \____/\____/_____/
+                         /_____/                 /_____/
+        ========================================================================
+        """)
+    choice = start_menu()
+    if choice == "1":
+        auto_download()
+    elif choice == "2":
+        manual_download()
+
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
     GIT_PATH = os.path.join(BASE_DIR, "Git-2.42.0.2-64-bit.exe")
     os.environ['NO_PROXY'] = 'github.com'
     system_language = check_language()
-    print("""
-        ____  ____  ____       ___    ________ __    __________  ____  __
-       / __ \/ __ )/ __ \     /   |  / ____/ //_/   /_  __/ __ \/ __ \/ /
-      / / / / __  / / / /    / /| | / /_  / ,<       / / / / / / / / / /
-     / /_/ / /_/ / /_/ /    / ___ |/ __/ / /| |     / / / /_/ / /_/ / /___
-    /_____/_____/_____/____/_/  |_/_/   /_/ |_|____/_/  \____/\____/_____/
-                     /_____/                 /_____/
-    ========================================================================
-    """)
-    choice = start_menu()
-    if choice == "1":
-        auto_download()
-    elif choice == "2":
-        manual_download()
+    main()

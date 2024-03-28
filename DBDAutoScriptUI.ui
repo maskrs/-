@@ -402,7 +402,7 @@ QPushButton:hover {
        <string notr="true">color: rgb(130, 60, 200);</string>
       </property>
       <property name="text">
-       <string>ver 5.1.6</string>
+       <string>ver 5.1.7</string>
       </property>
      </widget>
      <widget class="QLabel" name="lb_message">
@@ -692,38 +692,6 @@ QPushButton:hover {
     <hint type="destinationlabel">
      <x>133</x>
      <y>212</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb_english</sender>
-   <signal>clicked()</signal>
-   <receiver>lb_message</receiver>
-   <slot>hide()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>219</x>
-     <y>366</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>192</x>
-     <y>474</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb_chinese</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>lb_message</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>160</x>
-     <y>367</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>162</x>
-     <y>478</y>
     </hint>
    </hints>
   </connection>

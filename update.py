@@ -70,22 +70,17 @@ def get_update():
     for filename in update_files:
         shutil.move(os.path.join('update', filename), os.path.join(current_dir, filename))
 
-if __name__ == '__main__':
+
+def main():
     print("""
-        ____  ____  ____       ___    ________ __    __________  ____  __
-       / __ \/ __ )/ __ \     /   |  / ____/ //_/   /_  __/ __ \/ __ \/ /
-      / / / / __  / / / /    / /| | / /_  / ,<       / / / / / / / / / /
-     / /_/ / /_/ / /_/ /    / ___ |/ __/ / /| |     / / / /_/ / /_/ / /___
-    /_____/_____/_____/____/_/  |_/_/   /_/ |_|____/_/  \____/\____/_____/
-                     /_____/                 /_____/
-    ========================================================================
-    """)
-    BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
-    CFG_PATH = os.path.join(BASE_DIR, "cfg.cfg")
-    U_PATH = os.path.join(BASE_DIR, "update")
-    UCFG_PATH = os.path.join(U_PATH, "cfg.cfg")
-    G_PATH = os.path.join(BASE_DIR, ".git")
-    system_language = check_language()
+           ____  ____  ____       ___    ________ __    __________  ____  __
+          / __ \/ __ )/ __ \     /   |  / ____/ //_/   /_  __/ __ \/ __ \/ /
+         / / / / __  / / / /    / /| | / /_  / ,<       / / / / / / / / / /
+        / /_/ / /_/ / /_/ /    / ___ |/ __/ / /| |     / / / /_/ / /_/ / /___
+       /_____/_____/_____/____/_/  |_/_/   /_/ |_|____/_/  \____/\____/_____/
+                        /_____/                 /_____/
+       ========================================================================
+       """)
     if os.path.exists(U_PATH) or os.path.exists(G_PATH):
         delete()
     if not system_language:
@@ -99,7 +94,6 @@ if __name__ == '__main__':
             sys.exit()
         get_update()
         delete()
-        subprocess.call("DBD_AFK_TOOL.exe")
         win32api.MessageBox(win32gui.GetForegroundWindow(), "更新完成。", "提示", win32con.MB_OK | win32con.MB_ICONQUESTION)
         sys.exit()
     elif system_language:
@@ -114,7 +108,15 @@ if __name__ == '__main__':
             sys.exit()
         get_update()
         delete()
-        subprocess.call("DBD_AFK_TOOL.exe")
         win32api.MessageBox(win32gui.GetForegroundWindow(), "Update completed", "Tip",
                             win32con.MB_OK | win32con.MB_ICONQUESTION)
         sys.exit()
+
+if __name__ == '__main__':
+    BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+    CFG_PATH = os.path.join(BASE_DIR, "cfg.cfg")
+    U_PATH = os.path.join(BASE_DIR, "update")
+    UCFG_PATH = os.path.join(U_PATH, "cfg.cfg")
+    G_PATH = os.path.join(BASE_DIR, ".git")
+    system_language = check_language()
+    main()

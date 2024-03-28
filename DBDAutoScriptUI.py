@@ -98,6 +98,8 @@ class Ui_MainWindow(object):
         self.cb_killer_do = QtWidgets.QCheckBox(self.frame_5)
         self.cb_killer_do.setEnabled(False)
         self.cb_killer_do.setGeometry(QtCore.QRect(20, 80, 211, 16))
+        self.cb_killer_do.setCheckable(True)
+        self.cb_killer_do.setChecked(False)
         self.cb_killer_do.setObjectName("cb_killer_do")
         self.frame_6 = QtWidgets.QFrame(self.frame)
         self.frame_6.setGeometry(QtCore.QRect(0, 350, 311, 131))
@@ -170,8 +172,6 @@ class Ui_MainWindow(object):
         self.rb_killer.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
         self.rb_random_mode.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
         self.rb_fixed_mode.clicked['bool'].connect(self.pb_select_cfg.setEnabled) # type: ignore
-        self.rb_english.clicked.connect(self.lb_message.hide) # type: ignore
-        self.rb_chinese.clicked['bool'].connect(self.lb_message.show) # type: ignore
         self.rb_survivor.clicked['bool'].connect(self.pb_search.setDisabled) # type: ignore
         self.rb_killer.clicked['bool'].connect(self.pb_search.setEnabled) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -194,7 +194,7 @@ class Ui_MainWindow(object):
         self.cb_killer_do.setText(_translate("MainWindow", "屠夫赛后自动留言"))
         self.pb_start.setText(_translate("MainWindow", "开 始"))
         self.pb_stop.setText(_translate("MainWindow", "停 止"))
-        self.lb_version.setText(_translate("MainWindow", "ver 5.1.6"))
+        self.lb_version.setText(_translate("MainWindow", "ver 5.1.7"))
         self.lb_message.setText(_translate("MainWindow", "Q群：728284728"))
         self.lb_language.setText(_translate("MainWindow", "语言/Language:"))
         self.rb_chinese.setText(_translate("MainWindow", "中文"))
