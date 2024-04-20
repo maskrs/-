@@ -55,7 +55,7 @@ def auto_download():
             except subprocess.CalledProcessError:
                 print("未检测到GIT，下载GIT中...请稍后\n")
                 download_file(
-                    'https://github.com/git-for-windows/git/releases/download/v2.42.0.windows.2/Git-2.42.0.2-64-bit.exe',
+                    'https://registry.npmmirror.com/-/binary/git-for-windows/v2.42.0.windows.2/Git-2.42.0.2-64-bit.exe',
                     'Git-2.42.0.2-64-bit.exe')
                 print("\nGIT下载完成，等待安装…")
                 cmd = GIT_PATH + ' /sp- /silent /norestart'
@@ -128,6 +128,6 @@ if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
     GIT_PATH = os.path.join(BASE_DIR, "Git-2.42.0.2-64-bit.exe")
-    os.environ['NO_PROXY'] = 'github.com'
+    os.environ['NO_PROXY'] = 'registry.npmmirror.com'
     system_language = check_language()
     main()

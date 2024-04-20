@@ -116,21 +116,3 @@ def key_up(handle: HWND, key: str):
     wparam = vk_code
     lparam = (scan_code << 16) | 0XC0000001
     PostMessageW(handle, WM_KEYUP, wparam, lparam)
-
-if __name__ == "__main__":
-#     # 需要和目标窗口同一权限，游戏窗口通常是管理员权限
-#     # import sys
-    import time
-#     # if not windll.shell32.IsUserAnAdmin():
-#     #     # 不是管理员就提权
-#     #     windll.shell32.ShellExecuteW(
-#     #         None, "runas", sys.executable, __file__, None, 1)
-#
-    handle = windll.user32.FindWindowW(None, "DeadByDaylight  ")
-#     # 控制角色向前移动两秒
-    time.sleep(1)
-    key_down(handle, 'lshift')
-    key_down(handle, 'w')
-    time.sleep(10)
-    key_up(handle, 'w')
-    key_up(handle, 'lshift')

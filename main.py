@@ -1,6 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+import atexit
 import functools
 import glob
+import json
 import os.path
 import random
 import subprocess
@@ -18,73 +20,31 @@ import win32api
 import win32con
 import win32gui
 import keyboard
+import logging
 from PIL import Image
 from PyQt5.QtCore import QTranslator, QLocale, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
 from DBDAutoScriptUI import Ui_MainWindow
-from keyboard_operation import key_down, key_up
 from selec_killerUI import Ui_Dialog
+from AdvancedParameterUI import Ui_AdvancedWindow
+from TipForm import Ui_TipForm
+from ShowLog import Ui_ShowLogDialog
+from keyboard_operation import key_down, key_up
 from simpleaudio import WaveObject
-from functools import wraps
 from typing import Callable, List
-
-
-class Coord:
-    def __init__(self, x1_coor, y1_coor, x2_coor=0, y2_coor=0):
-        self.x1_coor = x1_coor
-        self.y1_coor = y1_coor
-        self.x2_coor = x2_coor
-        self.y2_coor = y2_coor
-
-    def processed_coord(self):
-        # 获取缩放后的屏幕分辨率,并获得比例
-        ScreenX = win32api.GetSystemMetrics(0)  # 屏幕分辨率 横向
-        ScreenY = win32api.GetSystemMetrics(1)  # 屏幕分辨率 纵向
-        factorX = ScreenX / 1920
-        factory = ScreenY / 1080
-        self.x1_coor = self.x1_coor * factorX
-        self.y1_coor = self.y1_coor * factory
-        self.x2_coor = self.x2_coor * factorX
-        self.y2_coor = self.y2_coor * factory
-        return self.x1_coor, self.y1_coor, self.x2_coor, self.y2_coor
-
-    def area_check(self):
-        self.x1_coor = int(self.x1_coor)
-        self.y1_coor = int(self.y1_coor)
-        self.x2_coor = int(self.x2_coor)
-        self.y2_coor = int(self.y2_coor)
-        return self.x1_coor, self.y1_coor, self.x2_coor, self.y2_coor
-
-
-class Logger(object):
-    def __init__(self, log_path="default.log"):
-        import sys
-        self.terminal = sys.stdout
-        self.log = open(log_path, "wb", buffering=0)  # , encoding="utf-8"
-
-    def print(self, *message):
-        message = ",".join([str(it) for it in message])
-        # self.terminal.write(str(message) + "\n")
-        self.log.write(str(message).encode('utf-8') + b"\n")
-
-    def flush(self):
-        self.terminal.flush()
-        self.log.flush()
-
-    def close(self):
-        self.log.close()
 
 
 def begin():
     global begin_state
     cfg.read(CFG_PATH, encoding='utf-8')
     if not begin_state:
-        begin_state = True
         open(LOG_PATH, 'w').close()
         save_cfg()
         if start_check():
+            screen_age()
+            begin_state = True
             # 播放WAV文件
             play_str.play()
             event.clear()
@@ -104,6 +64,7 @@ def kill():
     del_jpg()
     begin_state = False
     event.set()
+    log.info(f"结束脚本····\n")
 
 
 def del_jpg():
@@ -117,16 +78,19 @@ def del_jpg():
             # print(f"成功删除文件: {file}")
         except OSError as e:
             # 如果文件正在被其他进程使用，通常会抛出PermissionError
-            log.print(f"{now_time()}……//////退出时删除文件时出错: {file} - {e.strerror}")
+            print(f"退出时删除文件时出错: {file} - {e.strerror}\n")
 
 
 class DbdWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.main_ui = Ui_MainWindow()
-        self.sel_dialog = SelectWindow()
         self.trans = QTranslator()
         self.main_ui.setupUi(self)
+        self.init_signals()
+
+    def init_signals(self):
+        #  初始化信号和槽连接
         self.main_ui.pb_select_cfg.clicked.connect(self.pb_select_cfg_click)
         self.main_ui.pb_search.clicked.connect(self.pb_search_click)
         self.main_ui.pb_start.clicked.connect(begin)
@@ -135,51 +99,31 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.rb_chinese.clicked.connect(self.rb_chinese_change)
         self.main_ui.rb_english.clicked.connect(self.rb_english_change)
         self.main_ui.pb_help.clicked.connect(self.pb_help_click)
+        self.main_ui.cb_bvinit.clicked.connect(self.cb_bvinit_click)
+        self.main_ui.pb_advanced.clicked.connect(self.pb_advanced_click)
+        self.main_ui.pb_showlog.clicked.connect(self.pb_showlog_click)
+
 
     def pb_search_click(self):
-        global stop_thread, checktip
-        if not checktip.is_alive():
-            stop_thread = False
-            checktip = threading.Thread(target=check_tip)
-            checktip.start()
-        # 判断游戏是否运行
-        hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
-        if eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_chinese"):
-            win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示",
-                                win32con.MB_OK | win32con.MB_ICONWARNING)
-            sys.exit()
-        elif eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_english"):
-            win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
-                                win32con.MB_OK | win32con.MB_ICONWARNING)
-            sys.exit()
-        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-        notification.show()
-        self.notification_hwnd = win32gui.FindWindow(None, "Transparent Notification")
-        win32gui.SetWindowPos(self.notification_hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                              win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-        time.sleep(2)
-        log.print(f"{now_time()}……//////开始检索。\n********************")
-        moveclick(141, 109, 1, 1)  # 打开角色按钮
-        back_first()
-        thread = threading.Thread(target=self.run_search_and_close_notification)  # 无边框窗口通知
-        thread.start()
+        tf_widget.tipform_ui.retranslateUi(tf_widget)
+        tf_widget.loading_settings()
+        tf_widget.show()
 
-    def pb_help_click(self):
+    @staticmethod
+    def pb_help_click():
         webbrowser.open("https://x06w8gh3wwh.feishu.cn/wiki/JKjhwJBNFi6pj5kBoB1cS7HGnkU?from=from_copylink")
 
-    def run_search_and_close_notification(self):
-        custom_select.search_killer_name(self_defined_parameter['killer_number'])
-        win32gui.SetWindowPos(self.notification_hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-                              win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-        notification.close()
-
-    def github(self):
+    @staticmethod
+    def github():
         webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL")
 
     def pb_select_cfg_click(self):
-        self.sel_dialog.select_ui.retranslateUi(self)
-        self.sel_dialog.exec()
+        sel_dialog.select_ui.retranslateUi(sel_dialog)
+        sel_dialog.exec_()
+
+    def pb_advanced_click(self):
+        adv_dialog.advanced_ui.retranslateUi(adv_dialog)
+        adv_dialog.exec_()
 
     def rb_chinese_change(self):
         # 默认的中文包，不要新建
@@ -191,9 +135,6 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         save_cfg()
         cfg.read(CFG_PATH, encoding='utf-8')
 
-        # settings.setValue("UPDATE/rb_chinese", dbd_window.main_ui.rb_chinese.isChecked())
-        # settings.setValue("UPDATE/rb_english", dbd_window.main_ui.rb_english.isChecked())
-
     def rb_english_change(self):
         # 导入语言包，english是翻译的.qm文件
         self.trans.load(TRANSLATE_PATH)
@@ -203,21 +144,44 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.lb_message.show()
         save_cfg()
         cfg.read(CFG_PATH, encoding='utf-8')
-        # settings.setValue("UPDATE/rb_chinese", dbd_window.main_ui.rb_chinese.isChecked())
-        # settings.setValue("UPDATE/rb_english", dbd_window.main_ui.rb_english.isChecked())
 
-    #
-    # def cb_rotate_solo_click(self):
-    #     self.main_ui.cb_rotate_order.setChecked(False)
-    #     self.main_ui.cb_select_killer.setChecked(False)
-    #
-    # def cb_rotate_order_click(self):
-    #     self.main_ui.cb_rotate_solo.setChecked(False)
-    #     self.main_ui.cb_select_killer.setChecked(False)
-    #
-    # def cb_select_killer_click(self):
-    #     self.main_ui.cb_rotate_solo.setChecked(False)
-    #     self.main_ui.cb_rotate_order.setChecked(False)
+    def cb_bvinit_click(self):
+        """重置二值化校准开关"""
+        keys_to_update = [
+            '匹配大厅二值化阈值',
+            '准备房间二值化阈值',
+            '结算页二值化阈值',
+            '结算页每日祭礼二值化阈值',
+            '段位重置二值化阈值',
+            '主页面每日祭礼二值化阈值',
+            '主页面开始按钮二值化阈值',
+            '断线检测二值化阈值',
+            '新内容二值化阈值',
+            '准备取消按钮二值化阈值'
+        ]
+        if self.main_ui.cb_bvinit.isChecked():
+            # 遍历键列表并更新字典中的值
+            for key in keys_to_update:
+                current_value = self_defined_args[key]
+                current_value[2] = 0  # 更新第三个元素
+                self_defined_args[key] = current_value  # 将更新后的数组重新赋值给字典中对应的键
+        else:
+            # 遍历键列表并更新字典中的值
+            for key in keys_to_update:
+                current_value = self_defined_args[key]
+                current_value[2] = 1  # 更新第三个元素
+                self_defined_args[key] = current_value  # 将更新后的数组重新赋值给字典中对应的键
+
+        # 将更新后的键值对写回文件
+        with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
+
+    def pb_showlog_click(self):
+        shl_dialog.showlog_ui.retranslateUi(shl_dialog)
+        shl_dialog.loading_settings()
+        shl_dialog.exec_()
+
+
 
 
 class SelectWindow(QDialog, Ui_Dialog):
@@ -229,6 +193,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         self.select_ui.pb_invert.clicked.connect(self.pb_invert_click)
         self.select_ui.pb_save.clicked.connect(self.pb_save_click)
 
+
     def pb_select_all_click(self):
         """全选点击槽"""
         # 获取self.select_ui中所有以cb_开头的属性
@@ -238,6 +203,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         # 遍历复选框列表，设置每个复选框为选中状态
         for checkbox in checkboxes:
             checkbox.setChecked(True)
+
 
     def pb_invert_click(self):
         """反选点击槽"""
@@ -249,184 +215,185 @@ class SelectWindow(QDialog, Ui_Dialog):
         for checkbox in checkboxes:
             checkbox.toggle()
 
-    def pb_save_click(self):
+
+    @staticmethod
+    def pb_save_click():
         save_cfg()
         cfg.read(CFG_PATH, encoding='utf-8')
 
 
-class TransparentNotification(QWidget):
+
+
+class AdvancedParameter(QDialog, Ui_AdvancedWindow):
     def __init__(self):
         super().__init__()
-        cfg.read(CFG_PATH)
-        self.setWindowTitle('Transparent Notification')
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.X11BypassWindowManagerHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setGeometry(800, 25, 250, 50)  # 设置窗口大小和位置
-        if cfg.getboolean("UPDATE", "rb_chinese"):
-            self.label = QLabel('检索中…', self)
-        elif cfg.getboolean("UPDATE", "rb_english"):
-            self.label = QLabel('SEARCHING…', self)
-        self.label.setStyleSheet('color: pink; font-size: 22px; font-weight: bold; '
-                                 'font-style: italic; text-align: center;'
-                                 'background-color: rgba(192, 192, 192, 0);')
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setGeometry(40, 5, 250, 45)  # 设置标签大小和位置
+        self.advanced_ui = Ui_AdvancedWindow()
+        self.advanced_ui.setupUi(self)
+        # 控件到设置键的反向映射
+        self.reverse_mapping = {
+            self.advanced_ui.sb_maxenter: '最大换行次数',
+            self.advanced_ui.te_killer_message: '赛后发送消息',
+            self.advanced_ui.te_human_message: '人类发送消息',
+            self.advanced_ui.le_tuzixy: '女猎手所在位置的坐标',
+            self.advanced_ui.le_firstx: '角色第一行横坐标',
+            self.advanced_ui.le_firsty: '角色第一行纵坐标',
+            self.advanced_ui.te_lastx: '最后七个角色横坐标',
+            self.advanced_ui.te_lasty: '最后七个角色纵坐标',
+            self.advanced_ui.sb_backfirst: '角色回滚滚轮到最顶端的次数',
+            self.advanced_ui.le_play_area: '开始游戏、准备就绪按钮的识别范围',
+            self.advanced_ui.le_over_area: '结算页的识别范围',
+            self.advanced_ui.le_orites_area: '结算页每日祭礼的识别范围',
+            self.advanced_ui.le_season_reset: '段位重置的识别范围',
+            self.advanced_ui.le_dr_main: '主界面的每日祭礼识别范围',
+            self.advanced_ui.le_mainjudge: '主页面开始按钮的识别范围',
+            self.advanced_ui.le_dccheck: '断线检测的识别范围',
+            self.advanced_ui.le_news: '新内容的识别范围',
+            self.advanced_ui.le_evrewards: 'event_rewards',
+            self.advanced_ui.le_playxy: '开始游戏和准备就绪按钮的坐标',
+            self.advanced_ui.le_seasonresetxy: '段位重置按钮的坐标',
+            self.advanced_ui.le_overritesxy: '结算页祭礼完成坐标',
+            self.advanced_ui.le_over_continuexy: '结算页继续按钮坐标',
+            self.advanced_ui.le_newsxy: '主页面新闻关闭坐标',
+            self.advanced_ui.le_main_ritesxy: '主页面祭礼关闭坐标',
+            self.advanced_ui.le_main_startxy: '主页面开始坐标',
+            self.advanced_ui.le_main_humanxy: '主页面逃生者坐标',
+            self.advanced_ui.le_main_killerxy: '主页面杀手坐标',
+            self.advanced_ui.le_rolexy: '匹配大厅的角色按钮坐标',
+        }
+        self.load_settings()
+        self.init_signals()
 
+    def init_signals(self):
+        """初始化信号和槽连接"""
 
-class CustomSelectKiller:
-    def __init__(self):
-        self.ocr_error = 0
-        self.killer_name_array = []
-        self.own_number = 0
-        self.select_killer_lst = []
-        self.match_select_killer_lst = []
-        # 随版本更改
-        if cfg.getboolean("UPDATE", "rb_chinese"):
-            self.all_killer_name = self_defined_parameter['all_killer_name_CN']
-            self.SEARCH_PATH = SEARCH_PATH_CN
-            self.sign_1 = "未知恶物"
-            self.sign_2 = "角色"
-        elif cfg.getboolean("UPDATE", "rb_english"):
-            self.all_killer_name = self_defined_parameter['all_killer_name_EN']
-            self.SEARCH_PATH = SEARCH_PATH_EN
-            self.sign_1 = "UNKNOWN"
-            self.sign_2 = "CHARACTERS"
-        # print(self.all_killer_name)  ##### debug
+        # 为控件连接信号和槽
+        for widget, setting_key in self.reverse_mapping.items():
+            if isinstance(widget, QLineEdit):
+                widget.textChanged.connect(self.update_settings)
+            elif isinstance(widget, QSpinBox):
+                widget.valueChanged.connect(self.update_settings)
+            elif isinstance(widget, QTextEdit):
+                widget.textChanged.connect(self.update_settings)
 
-    def read_search_killer_name(self):
-        with open(self.SEARCH_PATH, "r", encoding='UTF-8') as search_file:
-            self.killer_name_array = search_file.readlines()
-            self.killer_name_array = [c.strip() for c in self.killer_name_array]
+        self.advanced_ui.pb_next.clicked.connect(self.pb_next_click)
+        self.advanced_ui.pb_previous.clicked.connect(self.pb_prev_click)
+        self.advanced_ui.pb_save.clicked.connect(self.pb_save_click)
+
+    def pb_next_click(self):
+        index = self.advanced_ui.stackedWidget.currentIndex()
+        if index >= 2:
+            index = 0
+        else:
+            index = index + 1
+        self.advanced_ui.stackedWidget.setCurrentIndex(index)
+
+    def pb_prev_click(self):
+        index = self.advanced_ui.stackedWidget.currentIndex()
+        if index <= 0:
+            index = 2
+        else:
+            index = index - 1
+        self.advanced_ui.stackedWidget.setCurrentIndex(index)
 
     @staticmethod
-    def keep_letters_only(input_string):
-        """只保留字母字符"""
-        cleaned_string = re.sub(r'[^a-zA-Z]', '', input_string)
-        return cleaned_string
+    def pb_save_click():
+        # 将更新后的键值对写回文件
+        with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
+        win32api.MessageBox(0, "保存成功", "提醒", win32con.MB_ICONASTERISK)
 
-    def killer_name_ocr(self):
-        found = False  # 设置一个标志
-        find = False
-        for sum_number in range(130, 60, -10):
-            if cfg.getboolean("UPDATE", "rb_chinese"):  # user use chinese
-                self.killer_name = img_ocr(390, 35, 744, 79, sum_number)
-            elif cfg.getboolean("UPDATE", "rb_english"):
-                self.killer_name = img_ocr(453, 35, 744, 79, sum_number)
-                self.killer_name = self.keep_letters_only(self.killer_name)
-            # print('当前检测内容：' + self.killer_name)  ##### debug
-            if ge(len(self.killer_name), 2):
-                for name in self.all_killer_name:
-                    if self.killer_name in name:
-                        # print(f"{name} 已匹配")  ##### debug
-                        found = True  # 找到匹配，设置标志为True
-                        break
-
-            if found:  # 如果找到匹配，跳出最外层循环
-                break
-
-        if found:
-            global stop_thread
-            self.write_killer_name()
-            if self.killer_name in self.sign_1:  # 随版本更改
-                self.ocr_error = 1
-                back_first()
-                moveclick(387, 300, 1, 1)
-                moveclick(141, 109, 1, 1)  # 关闭角色按钮
-                id = win32gui.FindWindow(None, "DBD_AFK_TOOL")
-                win32gui.SetWindowPos(id, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if cfg.getboolean("UPDATE", "rb_chinese"):
-                    win32api.MessageBox(0, "角色检索已完成", "提醒", win32con.MB_ICONASTERISK)
-                    stop_thread = True
-                elif cfg.getboolean("UPDATE", "rb_english"):
-                    win32api.MessageBox(0, "Character search completed", "Tips", win32con.MB_ICONASTERISK)
-                    stop_thread = True
-
-                # with open(SEARCH_PATH_CN, "w", encoding='UTF-8') as cn_file:
-                #     cn_file.write("\n".join(self.killer_name_array))
-                self.wrkn_file()
-                self.killer_name_array.clear()
-
-        else:
-            for sum_number in range(180, 120, -10):
-                if cfg.getboolean("UPDATE", "rb_chinese"):
-                    self.ocr_notown = img_ocr(241, 46, 339, 90, sum_number)
-                elif cfg.getboolean("UPDATE", "rb_english"):
-                    self.ocr_notown = img_ocr(329, 36, 470, 84, sum_number)  # 320,36,463,83
-                # print('\n当前notown：' + self.ocr_notown)  ##### debug
-                if ge(len(self.ocr_notown), 2):
-                    if self.ocr_notown in self.sign_2:
-                        find = True
-                        break
-            if find:
-                self.ocr_error = 1
-                time.sleep(2)
-                py.keyDown('esc')
-                py.keyUp('esc')
-                time.sleep(1)
-                py.keyDown('esc')
-                py.keyUp('esc')
-                id = win32gui.FindWindow(None, "DBD_AFK_TOOL")
-                win32gui.SetWindowPos(id, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if cfg.getboolean("UPDATE", "rb_chinese"):
-                    win32api.MessageBox(0, "角色检索已完成", "提醒", win32con.MB_ICONASTERISK)
-                    stop_thread = True
-                elif cfg.getboolean("UPDATE", "rb_english"):
-                    win32api.MessageBox(0, "Character search completed", "Tips", win32con.MB_ICONASTERISK)
-                    stop_thread = True
-
-                self.wrkn_file()
-                self.killer_name_array.clear()
-            else:
-                back_first()
-                moveclick(387, 300, 1, 1)
-                moveclick(141, 109, 1, 1)  # 关闭角色按钮
-                id = win32gui.FindWindow(None, "DBD_AFK_TOOL")
-                win32gui.SetWindowPos(id, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-                                      win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-                if cfg.getboolean("UPDATE", "rb_chinese"):
-                    win32api.MessageBox(0, "检索未完成，请检查以下：\n" + str(
-                        self.killer_name_array) + "\n有错误或乱码请重新检索",
-                                        "提醒", win32con.MB_ICONASTERISK)
-                    stop_thread = True
-                elif cfg.getboolean("UPDATE", "rb_english"):
-                    win32api.MessageBox(0, "Search not completed, please check the following:\n" + str(
-                        self.killer_name_array) + "\nIf there is an error or garbled code, please re-search", "Tips",
-                                        win32con.MB_ICONASTERISK)
-                    stop_thread = True
-
-                self.wrkn_file()
-                self.ocr_error = 1
-                self.killer_name_array.clear()
-
-    def write_killer_name(self):
-        # 必须与self_defined_parameter['all_killer_name_CN/EN']中的值一致
-        self.name_mapping = {
-            '设陷者顽皮熊': '设陷者',
-            '折士': '护士',
-            '迈克尔.迈尔斯迈克尔·迈尔斯迈克尔\'迈尔斯': '迈克尔.迈尔斯',
-            '妖巫妊巫': '妖巫',
-            '食人广': '食人魔',
-            '梦广梦硒梦麻梦厦': '梦魇',
-            '小于小吾小王小各': '小丑',
-            '影广影魔': '影魔',
-            '贞子页子': '贞子'
+    def load_settings(self):
+        """初始化加载设置文件内容"""
+        # 定义控件映射字典，键是 self_defined_args 中的键，值是控件的属性和方法
+        widget_mapping = {
+            '最大换行次数': (self.advanced_ui.sb_maxenter, 'setValue'),
+            '赛后发送消息': (self.advanced_ui.te_killer_message, 'setText'),
+            '人类发送消息': (self.advanced_ui.te_human_message, 'setText'),
+            '女猎手所在位置的坐标': (self.advanced_ui.le_tuzixy, 'setText'),
+            '角色第一行横坐标': (self.advanced_ui.le_firstx, 'setText'),
+            '角色第一行纵坐标': (self.advanced_ui.le_firsty, 'setText'),
+            '最后七个角色横坐标': (self.advanced_ui.te_lastx, 'setText'),
+            '最后七个角色纵坐标': (self.advanced_ui.te_lasty, 'setText'),
+            '角色回滚滚轮到最顶端的次数': (self.advanced_ui.sb_backfirst, 'setValue'),
+            '开始游戏、准备就绪按钮的识别范围': (self.advanced_ui.le_play_area, 'setText'),
+            '结算页的识别范围': (self.advanced_ui.le_over_area, 'setText'),
+            '结算页每日祭礼的识别范围': (self.advanced_ui.le_orites_area, 'setText'),
+            '段位重置的识别范围': (self.advanced_ui.le_season_reset, 'setText'),
+            '主界面的每日祭礼识别范围': (self.advanced_ui.le_dr_main, 'setText'),
+            '主页面开始按钮的识别范围': (self.advanced_ui.le_mainjudge, 'setText'),
+            '断线检测的识别范围': (self.advanced_ui.le_dccheck, 'setText'),
+            '新内容的识别范围': (self.advanced_ui.le_news, 'setText'),
+            'event_rewards': (self.advanced_ui.le_evrewards, 'setText'),
+            '开始游戏和准备就绪按钮的坐标': (self.advanced_ui.le_playxy, 'setText'),
+            '段位重置按钮的坐标': (self.advanced_ui.le_seasonresetxy, 'setText'),
+            '结算页祭礼完成坐标': (self.advanced_ui.le_overritesxy, 'setText'),
+            '结算页继续按钮坐标': (self.advanced_ui.le_over_continuexy, 'setText'),
+            '主页面新闻关闭坐标': (self.advanced_ui.le_newsxy, 'setText'),
+            '主页面祭礼关闭坐标': (self.advanced_ui.le_main_ritesxy, 'setText'),
+            '主页面开始坐标': (self.advanced_ui.le_main_startxy, 'setText'),
+            '主页面逃生者坐标': (self.advanced_ui.le_main_humanxy, 'setText'),
+            '主页面杀手坐标': (self.advanced_ui.le_main_killerxy, 'setText'),
+            '匹配大厅的角色按钮坐标': (self.advanced_ui.le_rolexy, 'setText'),
         }
-        for name, normalized_name in self.name_mapping.items():
-            if self.killer_name in name:
-                self.killer_name = normalized_name
-                break
-        log.print(f"{now_time()}……//////{self.killer_name}已匹配。\n********************")
-        self.killer_name_array.append(self.killer_name)
+
+        # 遍历映射字典
+        for key, (widget, method) in widget_mapping.items():
+            # 确保 key 存在于 self_defined_args 中
+            if key in self_defined_args:
+                # 获取对应的控件和方法名
+                ctrl = getattr(widget, method)
+                # 检查值的类型，如果是列表，则转换为字符串
+                arg = ', '.join(map(str, self_defined_args[key])) if isinstance(self_defined_args[key], list) else (
+                    self_defined_args)[key]
+                # 调用控件的方法，传入转换后的参数
+                ctrl(arg)
+            else:
+                QMessageBox.warning(self, "错误", "键值不在参数文件中")
+
+
+    def update_settings(self):
+        """获取更改后的数值"""
+        for widget, setting_key in self.reverse_mapping.items():
+            if isinstance(widget, QLineEdit):
+                settings_value = widget.text().strip()
+            elif isinstance(widget, QSpinBox):
+                settings_value = widget.value()
+            elif isinstance(widget, QTextEdit):
+                settings_value = widget.toPlainText()
+
+            if setting_key in ['最大换行次数', '角色回滚滚轮到最顶端的次数']:
+                self_defined_args[setting_key] = int(settings_value)
+            elif setting_key in ['赛后发送消息', '人类发送消息']:
+                self_defined_args[setting_key] = settings_value
+            else:
+                # 对于坐标等需要整数列表的设置，进行额外的验证
+                if settings_value:  # 确保输入不为空
+                    try:
+                        # 使用正则表达式分割字符串，排除英文逗号和空格
+                        tokens = re.split(r",\s*", settings_value)
+                        tokens = [int(token) for token in tokens if token]
+                        self_defined_args[setting_key] = tokens
+                    except ValueError:
+                        QMessageBox.warning(self, '错误', '请输入整数并使用英文逗号分隔')
+                else:
+                    # 如果输入为空，则不更新该设置
+                    self_defined_args[setting_key] = []
+
+
+
+
+class TipForm(QWidget, Ui_TipForm):
+    def __init__(self):
+        super().__init__()
+        self.tipform_ui = Ui_TipForm()
+        self.tipform_ui.setupUi(self)
+        self.init_signals()
+
+    def init_signals(self):
+        self.tipform_ui.pb_save.clicked.connect(self.pb_save_click)
 
     def wrkn_file(self):
+        """中英文相互映射写入文件"""
         # 创建两个字典，一个用于中文到英文的映射，另一个用于英文到中文的映射
         # 随版本更改
         cn_to_en_map = {
@@ -474,8 +441,9 @@ class CustomSelectKiller:
             cn_file.truncate()
             en_file.truncate()
 
+        killer_names = self.tipform_ui.pt_search.toPlainText().splitlines()
         # 遍历 killer_name_array
-        for killer_name in self.killer_name_array:
+        for killer_name in killer_names:
             # 检查 killer_name 是否在字典的键中
             if killer_name in cn_to_en_map:
                 # killer_name 是中文，将其写入中文文件并转换为英文写入英文文件
@@ -490,103 +458,67 @@ class CustomSelectKiller:
                 with open(SEARCH_PATH_CN, 'a', encoding='UTF-8') as cn_file:
                     cn_file.write(en_to_cn_map[killer_name] + '\n')
 
-    def search_killer_name(self, ownnumber):
-        self.ocr_error = 0
-        choice_last_x = [546, 708, 847, 395, 551, 705, 855]
-        choice_last_y = [497, 495, 486, 724, 717, 717, 710]
-        change_x = 387
-        change_y = 300
-        changecount_x = 0
-        changecount_y = 0
-        count = 0
-        n = 0
-        self.own_number = ownnumber  # 拥有的角色数量
-        result_integer = self.own_number // 4  # 取整
-        result_remainder = self.own_number % 4  # 取余数
+    def pb_save_click(self):
+        try:
+            if cfg.getboolean("UPDATE", "rb_chinese"):
+                SEARCH_PATH = SEARCH_PATH_CN
+            elif cfg.getboolean("UPDATE", "rb_english"):
+                SEARCH_PATH = SEARCH_PATH_EN
+            with open(SEARCH_PATH, 'w', encoding="utf-8") as f:
+                f.write(self.tipform_ui.pt_search.toPlainText())
+        except FileNotFoundError:
+            win32api.MessageBox(0, f"{SEARCH_PATH}文件不存在", "错误", win32con.MB_ICONERROR, win32con.MB_OK)
+        except Exception as e:
+            win32api.MessageBox(0, f"读取文件时出错:{e}", "警告  ", win32con.MB_ICONWARNING, win32con.MB_OK)
+        self.wrkn_file()
 
-        if result_remainder == 0:
-            result_integer = result_integer - 1
-            result_remainder = 4
+    def loading_settings(self):
+        try:
+            if cfg.getboolean("UPDATE", "rb_chinese"):
+                SEARCH_PATH = SEARCH_PATH_CN
+            elif cfg.getboolean("UPDATE", "rb_english"):
+                SEARCH_PATH = SEARCH_PATH_EN
+            with open(SEARCH_PATH, 'r', encoding="utf-8") as f:
+                self.tipform_ui.pt_search.setPlainText(f.read())
+        except FileNotFoundError:
+            win32api.MessageBox(0, f"{SEARCH_PATH}文件不存在", "错误", win32con.MB_ICONERROR, win32con.MB_OK)
+        except Exception as e:
+            win32api.MessageBox(0, f"读取文件时出错:{e}", "警告  ", win32con.MB_ICONWARNING, win32con.MB_OK)
 
-        timetypeone = result_integer
-        timetypetwo = result_remainder
-        # 随版本更新 最大值
-        if result_integer >= 8:
-            timetypeone = 7  # 最大值-1
 
-        while True:
-            if self.ocr_error == 1:
-                break
-            if count == timetypeone:
-                moveclick(387, 530, 1, 1)
-                self.killer_name_ocr()
-                if self.ocr_error == 1:
-                    break
-                if result_integer > 5:
-                    break
-                change_x = 387
-                change_y = 300
-                change = Coord(change_x, change_y)
-                change.processed_coord()
-                change.area_check()
-                for i in range(timetypetwo):
-                    py.moveTo(change.x1_coor, change.y1_coor)
-                    if n != 0:
-                        time.sleep(1)
-                        py.click()
-                        time.sleep(1)
-                        self.killer_name_ocr()
-                        if self.ocr_error == 1:
-                            break
-                    n += 1
-                    change_x += 200
-                break
-            while True:
-                if self.ocr_error == 1:
-                    break
-                change = Coord(change_x, change_y)
-                change.processed_coord()
-                change.area_check()
-                moveclick(change.x1_coor, change.y1_coor, 1, 1)
-                self.killer_name_ocr()
-                if self.ocr_error == 1:
-                    break
-                change_y = 300
-                change_x += 158
-                changecount_x += 1
-                if changecount_x == 4:
-                    break
-            change_x = 387
-            changecount_x = 0
-            changecount_y += 1
-            change_y += 225
-            count += 1
-            if changecount_y == 2:
-                changecount_y = 0
-            if self.ocr_error == 1:
-                break
-                ###
-        if result_integer > 6:  # 最大值-2
-            if result_integer <= 7:  # 最大值-1
-                timetypetwo = timetypetwo - 1
-            elif result_integer >= 8:  # 最大值
-                timetypetwo += 3
-            n = 0
-            for i in range(timetypetwo):
-                if self.ocr_error == 1:
-                    break
-                linex = choice_last_x[n]
-                liney = choice_last_y[n]
-                line = Coord(linex, liney)
-                line.processed_coord()
-                line.area_check()
-                moveclick(line.x1_coor, line.y1_coor, 1, 1)
-                self.killer_name_ocr()
-                # if self.ocr_error == 1:
-                #     break
-                n += 1
 
-    def select_killer_name_CN(self):
+
+class ShowLog(QDialog, Ui_ShowLogDialog):
+    def __init__(self):
+        super().__init__()
+        self.showlog_ui = Ui_ShowLogDialog()
+        self.showlog_ui.setupUi(self)
+
+    def loading_settings(self):
+        try:
+            with open(LOG_PATH, 'r', encoding="utf-8") as f:
+                self.showlog_ui.te_showlog.setPlainText(f.read())
+                print(f.read())
+        except FileNotFoundError:
+            win32api.MessageBox(0, "\"debug_data.log\"文件不存在", "错误", win32con.MB_ICONERROR, win32con.MB_OK)
+        except Exception as e:
+            win32api.MessageBox(0, f"读取文件时出错:{e}", "警告  ", win32con.MB_ICONWARNING, win32con.MB_OK)
+
+
+
+
+class CustomSelectKiller:
+    def __init__(self):
+        self.select_killer_lst = []
+        self.match_select_killer_lst = []
+        self.killer_name_array = []
+        if cfg.getboolean("UPDATE", "rb_chinese"):
+            self.SEARCH_PATH = SEARCH_PATH_CN
+        elif cfg.getboolean("UPDATE", "rb_english"):
+            self.SEARCH_PATH = SEARCH_PATH_EN
+
+    def select_killer_name_cn(self):
+        """获取选取的杀手名称"""
         # 随版本更改
         # 此处append内容需与游戏中的名称一致
         # 创建一个字典，将配置项和对应的杀手名称进行映射
@@ -632,7 +564,8 @@ class CustomSelectKiller:
             if cfg.getboolean("CUSSEC", key):
                 self.select_killer_lst.append(value)
 
-    def select_killer_name_EN(self):
+    def select_killer_name_en(self):
+        """获取选取的杀手名称"""
         # 随版本更改
         # 此处append内容需与self_defined_parameter['all_killer_name_EN']中的值一致
         # 创建一个字典，将配置项和对应的杀手名称进行映射
@@ -679,22 +612,32 @@ class CustomSelectKiller:
                 self.select_killer_lst.append(value)
 
     def match_select_killer_name(self):
-        for i in self.select_killer_lst:
-            self.match_select_killer_lst.append(self.killer_name_array.index(i) + 1)
+        """匹配选取的杀手名称在用户杀手列表中的位置"""
+        if cfg.getboolean("SEKI", "cb_usefile"):
+            with open(CUSTOM_KILLER_PATH, "r", encoding='UTF-8') as search_file:
+                self.select_killer_lst = search_file.readlines()
+                self.select_killer_lst = [c.strip() for c in self.select_killer_lst]
+            for i in self.select_killer_lst:
+                self.match_select_killer_lst.append(self.killer_name_array.index(i) + 1)
+        else:
+            for i in self.select_killer_lst:
+                self.match_select_killer_lst.append(self.killer_name_array.index(i) + 1)
 
-    def debug_traverse(self):  # 遍历调试
-        killer_name_array_len = len(self.killer_name_array)
-        print(*self.killer_name_array, sep=",")
-        for i in range(0, killer_name_array_len):
-            print(self.killer_name_array[i])
+    def read_search_killer_name(self):
+        """读取检索文件"""
+        with open(self.SEARCH_PATH, "r", encoding='UTF-8') as search_file:
+            self.killer_name_array = search_file.readlines()
+            self.killer_name_array = [c.strip() for c in self.killer_name_array]
+
+
 
 
 def initialize():
     """ 配置初始化 """
+    # 检查配置文件是否存在，如果不存在则创建一个空文件
     if not os.path.exists(CFG_PATH):
         with open(CFG_PATH, 'w', encoding='UTF-8') as configfile:
             configfile.write("")
-
     # 生成配置字典
     settings_dict = {
         "CPCI": {
@@ -705,14 +648,18 @@ def initialize():
             "rb_fixed_mode": False,
             "rb_random_mode": False
         },
+        "SEKI": {
+            "cb_usefile": False,
+        },
         "UPDATE": {
             "cb_autocheck": True,
             "rb_chinese": True,
             "rb_english": False
         },
-        "CUSSEC": {key: False for key in cussec_keys}
+        "CUSSEC": {
+            key: False for key in cussec_keys
+        }
     }
-
     for section, options in settings_dict.items():
         if section not in cfg:
             cfg[section] = {}
@@ -721,6 +668,28 @@ def initialize():
                 cfg[section][option] = str(value)
     with open(CFG_PATH, 'w') as configfile:
         cfg.write(configfile)
+
+    # 检查自定义文件是否存在，如果不存在则创建一个空字典
+    if not os.path.exists(SDAGRS_PATH):
+        existing_args = {}
+    else:
+        # 文件存在，读取并加载现有内容
+        with open(SDAGRS_PATH, 'r', encoding='utf-8') as f:
+            existing_args = json.load(f)
+
+    # 更新或添加新的键值对
+    for key, value in self_defined_args.items():
+        if key not in existing_args:
+            existing_args[key] = value
+
+    # 将更新后的键值对写回文件
+    with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
+        json.dump(existing_args, f, indent=4, ensure_ascii=False)
+
+    # 检查自定义杀手文件是否存在，如果不存在则创建一个空文件
+    if not os.path.exists(CUSTOM_KILLER_PATH):
+        with open(CUSTOM_KILLER_PATH, 'w', encoding='UTF-8') as custom_file:
+            custom_file.write("")
 
 
 def save_cfg():
@@ -745,10 +714,19 @@ def read_cfg():
         dbd_window.main_ui.rb_random_mode.setDisabled(True)
         dbd_window.main_ui.pb_select_cfg.setDisabled(True)
         dbd_window.main_ui.pb_search.setDisabled(True)
-    if cfg.getboolean("CPCI", "rb_killer"):
-        dbd_window.main_ui.cb_killer_do.setEnabled(True)
-    # if cfg.getboolean("UPDATE", "rb_english"):
-    #     dbd_window.main_ui.lb_message.hide()
+    # if cfg.getboolean("CPCI", "rb_killer"):
+    #     dbd_window.main_ui.cb_killer_do.setEnabled(True)
+
+    # 读取self_defined_args内容
+    try:
+        with open(SDAGRS_PATH, mode='r', encoding='utf-8') as f:
+            # 读取文件中的所有内容，并将其转换为一个字典
+            existing_args = json.load(f)
+            # 更新 self_defined_args 字典
+            self_defined_args.update(existing_args)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        # 如果文件不存在或内容不是有效的 JSON，您可以根据需要处理这个异常
+        log.error(f"读取SDargs.json文件异常: {e}")
 
 
 def authorization():
@@ -768,25 +746,22 @@ def authorization():
 
 def check_update():
     """check the update"""
-    ver_now = 'V5.1.7'
+    ver_now = 'V5.1.8'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
-        # confirm = pyautogui.confirm(text=text, title="检查更新", buttons=['OK', 'Cancel'])
         if cfg.getboolean("UPDATE", "rb_chinese"):
             confirm = win32api.MessageBox(0,
-                                          "检查到新版本：{b}\n\n当前的使用版本是：{a}，推荐更新。".format(a=ver_now,
-                                                                                                      b=ver_new)
-                                          , "检查更新", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
+                                          f"检查到新版本，是否更新？",
+                                          "检查更新", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
             if eq(confirm, 6):  # 打开
                 webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
                 subprocess.call("update.exe")
                 sys.exit()
         elif cfg.getboolean("UPDATE", "rb_english"):
             confirm = win32api.MessageBox(0,
-                                          "New version detected: {b}\n\nThe current version is: {a}, recommended update.".format(
-                                              a=ver_now, b=ver_new)
-                                          , "Check for updates", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
+                                          f"Check the new version. Is it updated?",
+                                          "Check for updates", win32con.MB_YESNO | win32con.MB_ICONQUESTION)
             if eq(confirm, 6):  # 打开
                 webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL/releases")
                 subprocess.call("update.exe")
@@ -822,6 +797,12 @@ def notice():
         win32api.MessageBox(0, notice, "通知", win32con.MB_OK | win32con.MB_ICONINFORMATION)
 
 
+def close_logger():
+    for handler in logging.root.handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.close()
+
+
 def screen_age():
     def get_screen_size():
         """获取缩放后的分辨率"""
@@ -830,7 +811,7 @@ def screen_age():
         return w, h
 
     screen_size = get_screen_size()
-    log.print(f"{now_time()}-----缩放后的分辨率为：{screen_size}\n")
+    log.info(f"系统分辨率为：{screen_size}\n")
 
 
 def hall_tip():
@@ -839,34 +820,11 @@ def hall_tip():
         if readyhall():
             py.press('enter')
             py.press('delete', 3)
-            py.write('AFK')
+            py.typewrite(self_defined_args['人类发送消息'])
             py.press('enter')
-            time.sleep(30)
+            time.sleep(20)
         else:
             time.sleep(1)
-
-
-def check_tip():
-    """检测tip弹窗，置顶"""
-    while not stop_thread:
-        time.sleep(0.5)
-        id = 0
-        id1 = win32gui.FindWindow(None, u"提醒")
-        id2 = win32gui.FindWindow(None, u"Tips")
-        if ne(id1, 0):
-            id = id1
-        elif ne(id2, 0):
-            id = id2
-        if ne(id, 0):
-            win32gui.SetWindowPos(id, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                                  win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-            # win32gui.SetWindowPos(id, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-            #                       win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-    handle = win32gui.FindWindow(None, "DBD_AFK_TOOL")
-    win32gui.SetWindowPos(handle, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                          win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 0, 0, 0, 0,
-                          win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
 
 
 def autospace():
@@ -875,25 +833,23 @@ def autospace():
         if not pause:
             key_down(hwnd, 'space')
             time.sleep(5)
-        else:
-            pass
 
 
 def action():
     cfg.read(CFG_PATH, encoding='utf-8')
     time.sleep(1)
+    rb_survivor = cfg.getboolean("CPCI", "rb_survivor")
+    rb_fixed_mode = cfg.getboolean("CPCI", "rb_fixed_mode")
+    rb_random_mode = cfg.getboolean("CPCI", "rb_random_mode")
+    rb_killer = cfg.getboolean("CPCI", "rb_killer")
     while not stop_action:
         if not pause:
-            if cfg.getboolean("CPCI", "rb_survivor"):
+            if rb_survivor:
                 survivor_action()
-            elif (cfg.getboolean("CPCI", "rb_fixed_mode") and
-                  cfg.getboolean("CPCI", "rb_killer")):
+            elif rb_fixed_mode and rb_killer:
                 killer_fixed_act()
-            elif (cfg.getboolean("CPCI", "rb_random_mode") and
-                  cfg.getboolean("CPCI", "rb_killer")):
+            elif rb_random_mode and rb_killer:
                 killer_action()
-        else:
-            pass
 
 
 def listen_key():
@@ -924,8 +880,8 @@ def listen_key():
             win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
             # 取消置顶
             win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        except Exception as ex:
+            print(f"An error occurred: {ex}")
 
     try:
         keyboard.add_hotkey(hotkeys[0], kill)
@@ -940,19 +896,47 @@ def listen_key():
         keyboard.unhook_all_hotkeys()
 
 
-def ocr_range_inspection(range_args: tuple, keywords: List[str],
-                         ocr_func: Callable, x1: int, y1: int, x2: int, y2: int) -> Callable:
+def ocr_range_inspection(keywords: List[str],
+                         ocr_func: Callable,
+                         args_name: str,
+                         min_sum_name: str,
+                         name: str) -> Callable:
+    """装饰器工厂，生成OCR识别函数，根据阈值范围和关键字进行识别
+    :param keywords: 关键字列表，list
+    :param ocr_func: 图像识别函数，Callable
+    :param args_name: 自定义参数的名称，str
+    :param min_sum_name: 最小阈值的名称，str
+    :param name: 图片命名，str
+    :return: Callable
+    """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper():
-            for threshold in range(*range_args):
-                # 调用img_ocr函数，传入固定坐标和阈值
-                ocr_result = ocr_func(x1, y1, x2, y2, sum=threshold)
-                log.print(f"{now_time()}……//////识别内容为：\n{ocr_result}\n********************")
-                if any(keyword in ocr_result for keyword in keywords):
-                    log.print(f"{now_time()}……///{func.__name__}()识别函数已识别···")
-                    return True
-            log.print(f"{now_time()}……///{func.__name__}()识别函数未识别···")
+            x1, y1, x2, y2 = self_defined_args[args_name]
+            threshold = self_defined_args[min_sum_name][0]
+            threshold_high = self_defined_args[min_sum_name][1]
+
+            # 调用img_ocr函数，传入固定坐标和阈值
+            ocr_result = ocr_func(x1, y1, x2, y2, name, sum=threshold)
+
+            if any(keyword in ocr_result for keyword in keywords):
+
+                if dbd_window.main_ui.cb_bvinit.isChecked() and self_defined_args[min_sum_name][2] == 0:
+                    if min_sum_name != '断线检测二值化阈值':
+                        self_defined_args[min_sum_name][2] = 1
+                        # 将更新后的键值对写回文件
+                        with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
+                            json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
+
+                return True
+            elif dbd_window.main_ui.cb_bvinit.isChecked() and self_defined_args[min_sum_name][2] == 0:
+
+                new_threshold = threshold - 10  # 递减一个步长作为新的阈值
+                if new_threshold < 30:  # 确保不低于停止值
+                    new_threshold = threshold_high
+                self_defined_args[min_sum_name][0] = new_threshold
+
             return False
 
         return wrapper
@@ -960,26 +944,30 @@ def ocr_range_inspection(range_args: tuple, keywords: List[str],
     return decorator
 
 
-def img_ocr(x1, y1, x2, y2, sum=128):
+def img_ocr(x1, y1, x2, y2, name, sum=128) -> str:
     """OCR识别图像，返回字符串
     :return: string"""
-    hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
-    ocrXY = Coord(x1, y1, x2, y2)
-    ocrXY.processed_coord()
-    ocrXY.area_check()
+    result = " "
+    ocrXY = [x1, y1, x2, y2]
     image = screen.grabWindow(hwnd).toImage()
-
     # 生成唯一的文件名
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = f"image_{timestamp}.jpg"
+    filename = f"image_{timestamp}_{name}.jpg"
     image.save(filename)
-
-    # 打开图像文件并裁剪、二值化
-    with Image.open(filename) as img:
-        cropped = img.crop((ocrXY.x1_coor, ocrXY.y1_coor, ocrXY.x2_coor, ocrXY.y2_coor))
-        grayscale_image = cropped.convert('L')
-        binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
-        binary_image.save(filename)  # 保存二值化后的图像到相同的文件
+    time.sleep(1)
+    try:
+        # 打开图像文件并裁剪、二值化
+        with Image.open(filename) as img:
+            cropped = img.crop((ocrXY[0], ocrXY[1], ocrXY[2], ocrXY[3]))
+            grayscale_image = cropped.convert('L')
+            binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
+            binary_image.save(filename)  # 保存二值化后的图像到相同的文件
+    except FileNotFoundError as e:
+        print(f"{e}:image file not found - {filename}\n")
+        return result
+    except OSError as f:
+        print(f"{f}:image file is truncated - {filename}\n")
+        return result
 
     custom_config = r'--oem 3 --psm 6'
     # 判断中英文切换模型
@@ -988,136 +976,60 @@ def img_ocr(x1, y1, x2, y2, sum=128):
         lan = "chi_sim"
     elif cfg.getboolean("UPDATE", "rb_english"):
         lan = "eng"
+    try:
+        with Image.open(filename) as ocr_image:
+            # 使用Tesseract OCR引擎识别图像中的文本
+            result = pytesseract.image_to_string(ocr_image, config=custom_config, lang=lan)
+            result = "".join(result.split())
+    except FileNotFoundError as e:
+        print(f"{e}:image file not found - {filename}\n")
+        return result
+    except OSError as f:
+        print(f"{f}:image file is truncated - {filename}\n")
+        return result
 
-    with Image.open(filename) as ocr_image:
-        # 使用Tesseract OCR引擎识别图像中的文本
-        result = pytesseract.image_to_string(ocr_image, config=custom_config, lang=lan)
-        result = "".join(result.split())
-    time.sleep(0.5)  # 确保文件关闭
     if os.path.exists(filename):
         try:
             os.remove(filename)  # 尝试删除文件
         except Exception as e:
-            log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
-    else:
-        log.print(f"{now_time()}……//////ocr检索删除文件时出错: 文件不存在 - {filename}")
-
+            print(f"ocr检索删除文件时出错: {filename} - {e}\n")
     return result
 
 
-@ocr_range_inspection((130, 80, -10), ["开始游戏", "PLAY"],
-                      img_ocr, 1446, 771, 1920, 1080)
+@ocr_range_inspection(["开始", "PLAY"],
+                      img_ocr, '开始游戏、准备就绪按钮的识别范围', '匹配大厅二值化阈值', "play")
 def starthall() -> bool:
     """check the start  hall
     :return: bool"""
     pass
 
 
-@ocr_range_inspection((130, 80, -10), ["准备就绪", "READY"],
-                      img_ocr, 1446, 771, 1920, 1080)
+@ocr_range_inspection(["准备", "READY"],
+                      img_ocr, '开始游戏、准备就绪按钮的识别范围', '准备房间二值化阈值', "ready")
 def readyhall() -> bool:
     """check the  ready hall
     :return: bool"""
     pass
 
 
-@ocr_range_inspection((120, 50, -10), ["取消", "CANCEL"], img_ocr, 1446, 771, 1920, 1080)
+@ocr_range_inspection(["取消", "CANCEL"],
+                      img_ocr, '开始游戏、准备就绪按钮的识别范围', '准备取消按钮二值化阈值', "cancel")
 def readycancle() -> bool:
     """检查游戏准备后的取消，消失就进入对局加载
     :return: bool"""
     pass
 
 
-@ocr_range_inspection((130, 50, -10), ["比赛", "得分", "MATCH", "SCORE"],
-                      img_ocr, 56, 46, 370, 172)
+@ocr_range_inspection(["比", "分", "你", "MATCH", "SCORE"],
+                      img_ocr, '结算页的识别范围', '结算页二值化阈值', "gameover")
 def gameover() -> bool:
     """检查对局后的继续
     :return: bool"""
     pass
 
 
-# def starthall() -> bool:
-#     """check the start  hall
-#     :return: bool"""
-#     log.print(f"{now_time()}……///starthall()识别函数识别中···")
-#     for sum in range(130, 80, -10):
-#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
-#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-#         if "开始游戏" in ocr or "PLAY" in ocr:
-#             log.print(f"{now_time()}……///starthall()识别函数已识别···")
-#             return True
-#     log.print(f"{now_time()}……///starthall()识别函数未识别···")
-#     return False
-#
-#
-# def readyhall() -> bool:
-#     """check the  ready hall
-#     :return: bool"""
-#     log.print(f"{now_time()}……///readyhall()识别函数识别中···")
-#     for sum in range(130, 80, -10):
-#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
-#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-#         if "准备就绪" in ocr or "READY" in ocr:
-#             log.print(f"{now_time()}……///readyhall()识别函数已识别···")
-#             return True
-#     log.print(f"{now_time()}……///readyhall()识别函数未识别···")
-#     return False
-#
-#
-# def readycancle() -> bool:
-#     """检查游戏准备后的取消，消失就进入对局加载
-#     :return: bool"""
-#     log.print(f"{now_time()}……///readycancle()识别函数识别中···")
-#     for sum in range(120, 50, -10):
-#         ocr = img_ocr(1446, 771, 1920, 1080, sum)
-#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-#         if "取消" in ocr or "CANCEL" in ocr:
-#             log.print(f"{now_time()}……///readycancle()识别函数已识别···")
-#             return True
-#     log.print(f"{now_time()}……///readycancle()识别函数未识别···")
-#     return False
-#
-#
-# def gameover() -> bool:
-#     """检查对局后的继续
-#     :return: bool"""
-#     log.print(f"{now_time()}……///gameover()识别函数识别中···")
-#     for sum in range(130, 50, -10):
-#         ocr = img_ocr(56, 46, 370, 172, sum)  # 70
-#         log.print(f"{now_time()}……//////识别内容为：\n{ocr}\n********************")
-#         # ocr2 = img_ocr(1745, 991, 1820, 1028, 30)
-#         if "比赛" in ocr or "得分" in ocr or "MATCH" in ocr or "SCORE" in ocr:
-#             log.print(f"{now_time()}……///gameover()识别函数已识别···")
-#             return True
-#     log.print(f"{now_time()}……///gameover()识别函数未识别···")
-#     return False
-
-
-def stage_judge():
-    """判断游戏所处在的阶段"""
-
-    log.print(f"{now_time()}……///脚本正在使用stage_judge()判断游戏所处阶段···")
-    if starthall():
-        stage = "匹配大厅"
-        return stage
-    elif readyhall():
-        stage = "准备房间"
-        return stage
-    else:
-        return None
-
-
-def now_time():
-    # 获得当前时间时间戳
-    now = int(time.time())
-    # 转换为其他日期格式,如:"%Y-%m-%d %H:%M:%S"
-    timeArray = time.localtime(now)
-    otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-    return otherStyleTime
-
-
-@ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"],
-                      img_ocr, 106, 267, 430, 339)
+@ocr_range_inspection(["每日", "DAILY RITUALS"],
+                      img_ocr, '结算页每日祭礼的识别范围', '结算页每日祭礼二值化阈值', "rites")
 def rites() -> bool:
     """check rites complete
     :return:bool"""
@@ -1126,23 +1038,24 @@ def rites() -> bool:
 
 # @ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"])
 # 检测活动奖励  #####未完成
-def event_rewards() -> bool:
-    """check the event rewards
-    :return: bool"""
-    eventXY = Coord(1864, 455, 1920, 491)
-    eventXY.processed_coord()
-    eventXY.area_check()
+# def event_rewards() -> bool:
+#     """check the event rewards
+#     :return: bool"""
+# eventXY = Coord(1864, 455, 1920, 491)
+# eventXY.processed_coord()
+# eventXY.area_check()
 
 
-@ocr_range_inspection((130, 80, -10), ["重置", "RESET"], img_ocr, 192, 194, 426, 291)
+@ocr_range_inspection(["重置", "RESET"],
+                      img_ocr, '段位重置的识别范围', '段位重置二值化阈值', "reset")
 def season_reset() -> bool:
     """check the season reset
     :return: bool"""
     pass
 
 
-@ocr_range_inspection((130, 80, -10), ["每日祭礼", "DAILY RITUALS"],
-                      img_ocr, 441, 255, 666, 343)
+@ocr_range_inspection(["每日", "DAILY RITUALS"],
+                      img_ocr, '主界面的每日祭礼识别范围', '主页面每日祭礼二值化阈值', "daily_ritual_main")
 def daily_ritual_main() -> bool:
     """check the daily task after serious disconnect -->[main]
     :return: bool
@@ -1150,7 +1063,8 @@ def daily_ritual_main() -> bool:
     pass
 
 
-@ocr_range_inspection((130, 80, -10), ["商城", "STORE"], img_ocr, 77, 266, 400, 386)
+@ocr_range_inspection(["开始", "PLAY"],
+                      img_ocr, '主页面开始按钮的识别范围', '主页面开始按钮二值化阈值', "start")
 def mainjudge() -> bool:
     """after serious disconnect.
     check the game whether return the main menu. -->[quit button]
@@ -1159,16 +1073,16 @@ def mainjudge() -> bool:
     pass
 
 
-@ocr_range_inspection((130, 80, -10), ["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
-                      img_ocr, 299, 614, 1796, 800)
+@ocr_range_inspection(["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
+                      img_ocr, '断线检测的识别范围', '断线检测二值化阈值', "disconnect")
 def disconnect_check() -> bool:
     """After disconnect check the connection status
     :return: bool"""
     pass
 
 
-@ocr_range_inspection((130, 80, -10), ["新内容", "NEW CONTENT"],
-                      img_ocr, 548, 4, 1476, 256)
+@ocr_range_inspection(["新内容", "NEW CONTENT"],
+                      img_ocr, '新内容的识别范围', '新内容二值化阈值', "news")
 def news() -> bool:
     """断线重连后的新闻
     :return: bool"""
@@ -1188,11 +1102,10 @@ def disconnect_confirm(sum=120) -> None:
                 return confirmX, confirmY
         return None, None
 
-    log.print(f"{now_time()}……///disconnect_confirm()识别函数识别中···")
+    # log.info(f"disconnect_confirm识别中···\n")
 
-    disconnect_check_colorXY = Coord(299, 614, 1796, 800)
-    disconnect_check_colorXY.processed_coord()
-    disconnect_check_colorXY.area_check()
+    disconnect_check_colorXY = self_defined_args['断线检测的识别范围']
+
     screen = QApplication.primaryScreen()
     image = screen.grabWindow(hwnd).toImage()
 
@@ -1200,14 +1113,21 @@ def disconnect_confirm(sum=120) -> None:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = f"image_{timestamp}.jpg"
     image.save(filename)
-
-    # 打开图像文件并裁剪、二值化
-    with Image.open(filename) as img:
-        cropped = img.crop((disconnect_check_colorXY.x1_coor, disconnect_check_colorXY.y1_coor,
-                            disconnect_check_colorXY.x2_coor, disconnect_check_colorXY.y2_coor))
-        grayscale_image = cropped.convert('L')
-        binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
-        binary_image.save(filename)  # 保存二值化后的图像到相同的文件
+    time.sleep(1)
+    try:
+        # 打开图像文件并裁剪、二值化
+        with Image.open(filename) as img:
+            cropped = img.crop((disconnect_check_colorXY[0], disconnect_check_colorXY[1],
+                                disconnect_check_colorXY[2], disconnect_check_colorXY[3]))
+            grayscale_image = cropped.convert('L')
+            binary_image = grayscale_image.point(lambda x: 0 if x < sum else 255, '1')
+            binary_image.save(filename)  # 保存二值化后的图像到相同的文件
+    except FileNotFoundError as e:
+        print(f"{e}:image file not found - {filename}\n")
+        return None
+    except OSError as f:
+        print(f"{f}:image file is truncated - {filename}\n")
+        return None
 
     custom_config = r'--oem 3 --psm 6'
     # 判断中英文切换模型
@@ -1216,50 +1136,53 @@ def disconnect_confirm(sum=120) -> None:
         lan = "chi_sim"
     elif cfg.getboolean("UPDATE", "rb_english"):
         lan = "eng"
+    try:
+        with Image.open(filename) as ocr_image:
+            # 使用Tesseract OCR引擎识别图像中的文本
+            result = pytesseract.image_to_boxes(ocr_image, config=custom_config, lang=lan)
+            result = result.split(' ')
+    except FileNotFoundError as e:
+        print(f"{e}:image file not found - {filename}\n")
+        return None
+    except OSError as f:
+        print(f"{f}:image file is truncated - {filename}\n")
+        return None
 
-    with Image.open(filename) as ocr_image:
-        # 使用Tesseract OCR引擎识别图像中的文本
-        result = pytesseract.image_to_boxes(ocr_image, config=custom_config, lang=lan)
-        result = result.split(' ')
-
-    log.print(f"{now_time()}……//////识别内容为：\n{result}\n********************")
+    # log.info(f"识别内容为：{result}\n")
 
     # 定义需要查找的字符串列表
-    target_strings = ["好", "关", "继", "O", "C"]
+    target_strings = ["好", "关", "继", "K", "C"]
 
     # 初始化坐标
-    confirmX, confirmY = None, None
+    # confirmX, confirmY = None, None
 
     # 遍历目标字符串列表
     for target_string in target_strings:
         confirmx, confirmy = get_coordinates(result, target_string)
         if confirmx is not None and confirmy is not None:
-            log.print(f"{now_time()}……///disconnect_confirm()识别函数已识别···")
+            # log.info(f"disconnect_confirm已识别···")
             # 调用moveclick函数
-            moveclick(disconnect_check_colorXY.x1_coor + confirmx, disconnect_check_colorXY.y2_coor - confirmy,
+            moveclick(disconnect_check_colorXY[0] + confirmx, disconnect_check_colorXY[3] - confirmy,
                       1, 1)
             # 找到了坐标，跳出循环
             break
 
     # 如果没有找到坐标，则可以根据需要添加处理逻辑
-    if confirmX is None or confirmY is None:
-        log.print(f"{now_time()}……///disconnect_confirm()识别函数未识别···")
+    # if confirmX is None or confirmY is None:
+    #     log.info("disconnect_confirm未识别···\n")
 
     if os.path.exists(filename):
         try:
             os.remove(filename)  # 尝试删除文件
         except Exception as e:
-            log.print(f"{now_time()}……//////ocr检索删除文件时出错: {filename} - {e}")
+            print(f"ocr检索删除文件时出错: {filename} - {e}\n")
     else:
-        log.print(f"{now_time()}……//////ocr检索删除文件时出错: 文件不存在 - {filename}")
+        print(f"ocr检索删除文件时出错: 文件不存在 - {filename}\n")
 
 
-def moveclick(x, y, delay=0, click_delay=0) -> None:
+def moveclick(x, y, delay: float = 0, click_delay: float = 0) -> None:
     """mouse move to a true place and click """
-    coorXY = Coord(x, y)
-    coorXY.processed_coord()
-    coorXY.area_check()
-    py.moveTo(coorXY.x1_coor, coorXY.y1_coor)
+    py.moveTo(x, y)
     time.sleep(delay)
     py.click()
     time.sleep(click_delay)
@@ -1267,8 +1190,8 @@ def moveclick(x, y, delay=0, click_delay=0) -> None:
 
 def auto_message() -> None:
     """对局结束后的自动留言"""
-    py.write(self_defined_parameter['message'])
-    py.press('space')
+    py.press('enter')
+    py.typewrite(self_defined_args['赛后发送消息'])
     py.press('enter')
     time.sleep(0.5)
 
@@ -1278,7 +1201,7 @@ def reconnect() -> bool:
     :return: bool -->TRUE
     """
     global stop_space, stop_action
-    log.print(f"{now_time()}……///正在进入重连···")
+    log.info(f"游戏断线，进入重连···")
     time.sleep(2)
     stop_space = True  # 自动空格线程标志符
     stop_action = True  # 动作线程标志符
@@ -1297,17 +1220,16 @@ def reconnect() -> bool:
 
     # 检测血点，判断断线情况
     if starthall() or readyhall():  # 小退
-        log.print(f"{now_time()}……///断线重连程度检测·····小退")
+        log.info(f"重连完成···错误代码")
         return True
     elif gameover():  # 意味着不在大厅
-        moveclick(1761, 1009)
-        log.print(f"{now_time()}……///断线重连程度检测·····小退")
+        moveclick(self_defined_args['结算页继续按钮坐标'][0], self_defined_args['结算页继续按钮坐标'][1])
+        log.info(f"重连完成···错误代码")
         return True
     else:  # 大退
-        log.print(f"{now_time()}……///断线重连程度检测·····大退")
 
         main_quit = False
-        while main_quit == False:
+        while not main_quit:
             if event.is_set():
                 return True
             if not pause_event.is_set():
@@ -1321,28 +1243,32 @@ def reconnect() -> bool:
             moveclick(10, 10, click_delay=1)  # 错误
             #### 活动奖励
             if news():
-                moveclick(1413, 992, click_delay=1)  # 新闻点击
+                moveclick(self_defined_args['主页面新闻关闭坐标'][0], self_defined_args['主页面新闻关闭坐标'][1],
+                          click_delay=1)  # 新闻点击
 
             # 判断每日祭礼
             if daily_ritual_main():
-                moveclick(545, 880, click_delay=1)
+                moveclick(self_defined_args['主页面祭礼关闭坐标'][0], self_defined_args['主页面祭礼关闭坐标'][1],
+                          click_delay=1)
             # 判断段位重置
             if season_reset():
-                moveclick(1468, 843, click_delay=1)
+                moveclick(self_defined_args['段位重置按钮的坐标'][0], self_defined_args['段位重置按钮的坐标'][1],
+                          click_delay=1)
             # 是否重进主页面判断
             if mainjudge():
-                moveclick(320, 100, click_delay=1)  # 点击开始
+                moveclick(self_defined_args['主页面开始坐标'][0], self_defined_args['主页面开始坐标'][1],
+                          click_delay=1)  # 点击开始
                 # 通过阵营选择判断返回大厅
                 if cfg.getboolean("CPCI", "rb_survivor"):
-                    moveclick(339, 320)
+                    moveclick(self_defined_args['主页面逃生者坐标'][0], self_defined_args['主页面逃生者坐标'][1])
                 elif cfg.getboolean("CPCI", "rb_killer"):
-                    moveclick(328, 224)
+                    moveclick(self_defined_args['主页面杀手坐标'][0], self_defined_args['主页面杀手坐标'][1])
                 main_quit = True
             if gameover():
-                moveclick(1761, 1009)
+                moveclick(self_defined_args['结算页继续按钮坐标'][0], self_defined_args['结算页继续按钮坐标'][1])
                 moveclick(10, 10)  # 避免遮挡
                 main_quit = True
-        log.print(f"{now_time()}……///重连完成···")
+        log.info(f"重连完成···断线")
         return True
 
 
@@ -1401,40 +1327,6 @@ def random_veer(veer_time) -> None:
     time.sleep(veer_time)
     key_up(hwnd, act_direction)
 
-
-# def random_veer_move():
-#     act_move = random_movement()
-#     key_down(hwnd, act_move)
-#     time.sleep(random_movetime())
-#     act_direction = random_direction()
-#     key_down(hwnd, act_direction)
-#     time.sleep(random_veertime())
-#     key_up(hwnd, act_direction)
-#     key_up(hwnd, act_move)
-
-# def hurt():
-#     """check survivor whether hurt
-#     ":return: bool"""
-#     hurtXY = Coord(106, 451, 150, 498)  # 102, 450, 159, 499
-#     hurtXY.processed_coord()
-#     hurtXY.area_check()
-#     ret1, ret2 = hurtXY.find_color("9F1409-000000")
-#     if gt(ret1, 0) and gt(ret2, 0):
-#         return True
-#     else:
-#         return False
-#
-# def on_hook():
-#     """check survivor whether on the hook
-#     :return: bool"""
-#     hookXY = Coord(106, 451, 150, 498)  # 189, 492, 325, 508
-#     hookXY.processed_coord()
-#     hookXY.area_check()
-#     ret1, ret2 = hookXY.find_color("5F261E-000000")
-#     if gt(ret1, 0) and gt(ret2, 0):
-#         return True
-#     else:
-#         return False
 
 def survivor_action() -> None:
     """survivor`s action"""
@@ -1518,7 +1410,7 @@ def killer_action() -> None:
             key_up(hwnd, act_move)
     elif custom_select.select_killer_lst[killer_num] in need_lst:
         act_direction = random_direction()
-        for i in range(10):
+        for i in range(5):
             key_down(hwnd, act_direction)
             time.sleep(0.05)
             key_up(hwnd, act_direction)
@@ -1528,7 +1420,7 @@ def killer_action() -> None:
             killer_ctrl()
     else:
         act_direction = random_direction()
-        for i in range(10):
+        for i in range(5):
             key_down(hwnd, act_direction)
             time.sleep(0.05)
             key_up(hwnd, act_direction)
@@ -1549,7 +1441,7 @@ def killer_fixed_act() -> None:
         veertime = round(random.uniform(0.285, 0.6), 3)
         random_veer(veertime)
         py.mouseDown(button='right')
-        time.sleep(2)
+        time.sleep(4)
         py.mouseUp(button='right')
         time.sleep(0.3)
     py.mouseDown()
@@ -1560,21 +1452,21 @@ def killer_fixed_act() -> None:
 
 def back_first() -> None:
     """click back the first character"""
-    wheelcoord = Coord(404, 536)
-    wheelcoord.processed_coord()
-    wheelcoord.area_check()
-    # 回到最开始,需要几次就回滚几次
-    py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
-    for i in range(3):  # 3
+    for i in range(self_defined_args['角色回滚滚轮到最顶端的次数']):
+        py.moveTo(self_defined_args['女猎手所在位置的坐标'][0], self_defined_args['女猎手所在位置的坐标'][1])
         py.sleep(0.5)
         py.scroll(1)
-    moveclick(405, 314, 1.5)
-
+    moveclick(self_defined_args['角色第一行横坐标'][0], self_defined_args['角色第一行纵坐标'][0], 1.5)
 
 
 def character_selection() -> None:
     """自选特定的角色轮转"""
     global character_num_b, circle, frequency, judge, character_num
+    # 角色选择的参数
+    ghX = self_defined_args['角色第一行横坐标']
+    ghY = self_defined_args['角色第一行纵坐标']
+    glX = self_defined_args['最后七个角色横坐标']
+    glY = self_defined_args['最后七个角色纵坐标']
     if eq(judge, 0):
         custom_select.read_search_killer_name()
         custom_select.match_select_killer_name()
@@ -1583,43 +1475,38 @@ def character_selection() -> None:
     py.sleep(1)
     moveclick(10, 10, 1, 1)
     time.sleep(1)
-    moveclick(141, 109, 1, 1)  # 角色按钮
+    moveclick(self_defined_args['匹配大厅的角色按钮坐标'][0], self_defined_args['匹配大厅的角色按钮坐标'][1], 1,
+              1)  # 角色按钮
     timey = floordiv(character_num[character_num_b], 4)  # 取整
     timex = mod(character_num[character_num_b], 4)  # 取余
     time.sleep(0.5)
-    wheelcoord = Coord(404, 536)  # 第五个坐标，提前处理
-    wheelcoord.processed_coord()
-    wheelcoord.area_check()
     back_first()
-    if lt(timey, 7):  # 最大的换行次数+1
+    if lt(timey, self_defined_args['最大换行次数'] + 1):  # 最大的换行次数+1
         if eq(timex, 0):
             timey -= 1
             timex = 4
         if gt(timey, 0):
-            py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
-            time.sleep(1.5)
             while True:
-                py.click()
-                time.sleep(1.5)
+                moveclick(self_defined_args['女猎手所在位置的坐标'][0], self_defined_args['女猎手所在位置的坐标'][1],
+                          1, 1)
                 frequency += 1
                 if eq(frequency, timey):
                     frequency = 0
                     break
         moveclick(ghX[timex - 1], ghY[timex - 1], 1.5)
-    elif gt(timey, 6):  # 最大换行次数
-        py.moveTo(wheelcoord.x1_coor, wheelcoord.y1_coor)
+    elif gt(timey, self_defined_args['最大换行次数']):  # 最大换行次数
         time.sleep(1.5)
         while True:
-            py.click()
-            time.sleep(1.5)
+            moveclick(self_defined_args['女猎手所在位置的坐标'][0], self_defined_args['女猎手所在位置的坐标'][1],
+                      1, 1)
             frequency += 1
             if eq(frequency, timey):
                 frequency = 0
                 break
-        if eq(timey, 7) and eq(timex, 0):  # 第一个判断最大换行次数加一
+        if eq(timey, (self_defined_args['最大换行次数'] + 1)) and eq(timex, 0):  # 第一个判断最大换行次数加一
             moveclick(ghX[3], ghY[3], 1.5)
         else:
-            final_number = character_num[character_num_b] - 28  # (最大换行+1)*4
+            final_number = character_num[character_num_b] - (self_defined_args['最大换行次数'] + 1) * 4  # (最大换行+1)*4
             # 最后两行的序数，减1为数组序数。再减1为下标
             if gt(final_number, 1):
                 final_number -= 2
@@ -1635,9 +1522,9 @@ def character_selection() -> None:
 def start_check() -> bool:
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
     if cfg.getboolean("UPDATE", "rb_chinese"):
-        custom_select.select_killer_name_CN()
+        custom_select.select_killer_name_cn()
     elif cfg.getboolean("UPDATE", "rb_english"):
-        custom_select.select_killer_name_EN()
+        custom_select.select_killer_name_en()
     # 判断游戏是否运行
     if eq(hwnd, 0) and cfg.getboolean("UPDATE", "rb_chinese"):
         win32api.MessageBox(hwnd, "未检测到游戏窗口，请先启动游戏。", "提示",
@@ -1647,7 +1534,9 @@ def start_check() -> bool:
         win32api.MessageBox(hwnd, "The game window was not detected. Please start the game first.", "Prompt",
                             win32con.MB_OK | win32con.MB_ICONWARNING)
         return False
-    if not custom_select.select_killer_lst and cfg.getboolean("CPCI", "rb_killer"):
+    # 判断角色选择是否规范
+    if (not custom_select.select_killer_lst and cfg.getboolean("CPCI", "rb_killer")
+            and not cfg.getboolean("SEKI", "cb_usefile")):
         if cfg.getboolean("UPDATE", "rb_chinese"):
             win32api.MessageBox(hwnd, "至少选择一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
             return False
@@ -1655,12 +1544,22 @@ def start_check() -> bool:
             win32api.MessageBox(hwnd, "Choose at least one killer.", "Tip",
                                 win32con.MB_OK | win32con.MB_ICONASTERISK)
             return False
+    # 使用外部文件时的判断
+    if eq(os.path.getsize(CUSTOM_KILLER_PATH), 0) and cfg.getboolean("SEKI", "cb_usefile"):
+        if cfg.getboolean("UPDATE", "rb_chinese"):
+            win32api.MessageBox(hwnd, "外部文件至少写入一个屠夫。", "提示", win32con.MB_OK | win32con.MB_ICONASTERISK)
+            return False
+        elif cfg.getboolean("UPDATE", "rb_english"):
+            win32api.MessageBox(hwnd, "External files are written to at least one killer.", "Tip",
+                                win32con.MB_OK | win32con.MB_ICONASTERISK)
+            return False
     moveclick(10, 10)
-    log.print(f"{now_time()}---启动脚本····")
+    log.info(f"启动脚本····\n")
     return True
 
 
 def afk() -> None:
+    """挂机主体函数"""
     global stop_space, stop_action, character_num_b, judge
     list_number = len(custom_select.select_killer_lst)
     circulate_number = 0
@@ -1668,6 +1567,7 @@ def afk() -> None:
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
     # 取消置顶
     win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOMOVE)
+
     while True:
         reconnection = False
         circulate_number += 1
@@ -1681,17 +1581,9 @@ def afk() -> None:
             if not pause_event.is_set():
                 pause_event.wait()
 
-            log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于匹配阶段···")
             # 判断条件是否成立
             if starthall():
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏处于匹配大厅···")
-                # 判断游戏所处的阶段
-                if eq(self_defined_parameter['stage_judge_switch'], 1):
-                    match_stage = stage_judge()
-                    if match_stage != "匹配大厅":
-                        log.print(f"{now_time()}……///当前不处于匹配大厅，此功能生效···")
-                        break
-
+                log.info(f"第{circulate_number}次脚本循环---进入匹配大厅···")
                 if cfg.getboolean("CPCI", "rb_killer"):
                     time.sleep(1)
                     if eq(list_number, 1):
@@ -1699,26 +1591,25 @@ def afk() -> None:
                         time.sleep(1)
                     elif gt(list_number, 1):
                         character_selection()
-                        print(custom_select.select_killer_lst, custom_select.match_select_killer_lst)
+                        time.sleep(1)
                 elif cfg.getboolean("CPCI", "rb_survivor"):
                     time.sleep(1)
-                # 进行准备
-                while starthall():  # debug:True -->False
+                while not matching:
                     if event.is_set():
                         break
                     if not pause_event.is_set():
                         pause_event.wait()
-                    moveclick(1742, 931, 1, 0.5)  # 处理坐标，开始匹配
-                    log.print(f"{now_time()}---第{circulate_number}次脚本循环---处于匹配大厅，处理坐标，开始匹配···")
+
+                    moveclick(self_defined_args['开始游戏和准备就绪按钮的坐标'][0],
+                              self_defined_args['开始游戏和准备就绪按钮的坐标'][1], 1, 0.5)  # 处理坐标，开始匹配
                     moveclick(20, 689, 1.5)  # 商城上空白
-                    if disconnect_check():  # 断线检测
-                        reconnection = reconnect()
-                    else:
-                        time.sleep(1.5)
-                matching = True
+                    if not starthall():
+                        matching = True
+
             elif disconnect_check():
                 reconnection = reconnect()
                 matching = True
+
 
         # 重连返回值的判断
         if reconnection:
@@ -1727,44 +1618,31 @@ def afk() -> None:
         '''
         准备加载
         '''
-        ready_load = False  # debug:False -->True
-        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备加载阶段···")
-        # # 检测游戏所在阶段
-        # if eq(self_defined_parameter['stage_judge_switch'], 1):
-        #     if ne(match_stage, "匹配大厅"):
+        # ready_load = False  # debug:False -->True
+        # while not ready_load:
+        #     if event.is_set():
+        #         break
+        #     if not pause_event.is_set():
+        #         pause_event.wait()
+        #     if not readycancle():
         #         ready_load = True
-        while not ready_load:
-            if event.is_set():
-                break
-            if not pause_event.is_set():
-                pause_event.wait()
-            if not readycancle():
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本准备加载阶段结束···")
-                ready_load = True
-            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏正在准备加载中···")
 
         '''
         准备
         '''
         ready_room = False  # debug:False -->True
-        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于准备阶段···")
         while not ready_room:
             if event.is_set():
                 break
             if not pause_event.is_set():
                 pause_event.wait()
-            # 判断游戏所处的阶段
-            if eq(self_defined_parameter['stage_judge_switch'], 1):
-                ready_stage = stage_judge()
-                if ready_stage != "准备房间":
-                    log.print(f"{now_time()}……///当前不处于准备房间，此功能生效···")
-                    break
+
             if readyhall():
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备大厅···")
-                time.sleep(5)
-                moveclick(10, 10, 2, 2)
-                moveclick(1742, 931, 2, 0.5)
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---准备按钮点击完成···")
+                log.info(f"第{circulate_number}次脚本循环---进入准备大厅···")
+                time.sleep(1)
+                moveclick(10, 10, 1, 1)
+                moveclick(self_defined_args['开始游戏和准备就绪按钮的坐标'][0],
+                          self_defined_args['开始游戏和准备就绪按钮的坐标'][1], 2, 0.5)
                 moveclick(20, 689)  # 商城上空白
                 if not readyhall():
                     ready_room = True
@@ -1780,21 +1658,14 @@ def afk() -> None:
         '''
 
         game_load = False
-        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局载入阶段···")
-        # # 检测游戏所在阶段
-        # if eq(self_defined_parameter['stage_judge_switch'], 1):
-        #     if ne(ready_stage, "准备房间"):
-        #         game_load = True
         while not game_load:
             if event.is_set():
                 break
             if not pause_event.is_set():
                 pause_event.wait()
             if not readycancle():
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏已进入准备加载阶段···")
                 game_load = True
                 time.sleep(5)
-            log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局正在载入中···")
 
         '''
         局内与局后
@@ -1806,37 +1677,28 @@ def afk() -> None:
         auto_space.start()
         auto_action.start()
         game = False
-        log.print(f"{now_time()}---第{circulate_number}次脚本循环---脚本处于对局动作执行阶段···")
-        action_time = 0
+        log.info(f"第{circulate_number}次脚本循环---进入对局···")
         while not game:
             if event.is_set():
                 break
             if not pause_event.is_set():
                 pause_event.wait()
-            action_time += 1
-            # 判断所处的游戏阶段
-            if eq(self_defined_parameter['stage_judge_switch'], 1):
-                end_stage = stage_judge()
-                if end_stage == "匹配大厅" or end_stage == "准备房间":
-                    stop_space = True  # 自动空格线程标志符
-                    stop_action = True  # 动作线程标志符
-                    log.print(f"{now_time()}……///当前不处于游戏结算界面，纠察系统生效···")
-                    break
 
             if gameover():
-                log.print(f"{now_time()}---第{circulate_number}次脚本循环---游戏对局已结束···")
+                log.info(f"第{circulate_number}次脚本循环---游戏结束···\n")
                 stop_space = True  # 自动空格线程标志符
                 stop_action = True  # 动作线程标志符
-                moveclick(10, 10, 0.5, 1)
-                time.sleep(2)
+                moveclick(10, 10, 0.5, 2)
                 # 判断段位重置
                 if season_reset():
-                    moveclick(1468, 843, click_delay=1)
+                    moveclick(self_defined_args['段位重置按钮的坐标'][0],
+                              self_defined_args['段位重置按钮的坐标'][1], click_delay=1)
                 # 祭礼完成
                 if rites():
-                    moveclick(396, 718, 0.5, 1)
-                    moveclick(140, 880)
-                time.sleep(5)
+                    moveclick(self_defined_args['结算页祭礼完成坐标'][0],
+                              self_defined_args['结算页祭礼完成坐标'][1], 0.5, 1)
+                    moveclick(self_defined_args['结算页祭礼完成坐标'][2], self_defined_args['结算页祭礼完成坐标'][3])
+                time.sleep(3)
 
                 # 删除动作线程的输入字符
                 py.press('enter')
@@ -1846,7 +1708,8 @@ def afk() -> None:
                 if (cfg.getboolean("CPCI", "cb_killer_do")
                         and cfg.getboolean("CPCI", "rb_killer")):
                     auto_message()
-                moveclick(1761, 1009, 0.5, 1)  # return hall
+                moveclick(self_defined_args['结算页继续按钮坐标'][0],
+                          self_defined_args['结算页继续按钮坐标'][1], 0.5, 1)  # return hall
                 moveclick(10, 10)  # 避免遮挡
                 if not gameover():
                     game = True
@@ -1854,8 +1717,6 @@ def afk() -> None:
                     reconnection = reconnect()
                     game = True
             else:
-                log.print(
-                    f"{now_time()}---第{circulate_number}次脚本循环---游戏处于对局阶段···动作循环已执行{action_time}次")
                 if disconnect_check():
                     reconnection = reconnect()
                     game = True
@@ -1876,7 +1737,6 @@ def afk() -> None:
 
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
-    # DBDAS_PATH = os.path.join(BASE_DIR, "DBDAutoScript")
     CHECK_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
     OCR_PATH = os.path.join(BASE_DIR, "tesseract-ocr\\tesseract.exe")
     TESSDATA_PREFIX = os.path.join(BASE_DIR, "tesseract-ocr\\tessdata")
@@ -1886,38 +1746,68 @@ if __name__ == '__main__':
     CFG_PATH = os.path.join(BASE_DIR, "cfg.cfg")
     SEARCH_PATH_CN = os.path.join(BASE_DIR, "searchfile_cn.txt")
     SEARCH_PATH_EN = os.path.join(BASE_DIR, "searchfile_en.txt")
-    # SDPARAMETER_PATH = os.path.join(BASE_DIR, "SDparameter.json")
+    CUSTOM_KILLER_PATH = os.path.join(BASE_DIR, "custom_killer.txt")
+    SDAGRS_PATH = os.path.join(BASE_DIR, "SDargs.json")
     TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
     LOG_PATH = os.path.join(BASE_DIR, "debug_data.log")
+    play_str = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
+    play_pau = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
+    play_res = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
+    play_end = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
+
     # 自定义参数
-    self_defined_parameter = {'killer_number': 35, 'message': 'GG',
-                              'all_killer_name_CN': ["设陷者顽皮熊", "幽灵", "农场主", "折士", "女猎手",
-                                                     "迈克尔.迈尔斯迈克尔·迈尔斯迈克尔\'迈尔斯",
-                                                     "妖巫妊巫", "医生",
-                                                     "食人广", "梦广梦硒梦麻梦厦", "门徒", "小于小吾小王小各", "怨灵",
-                                                     "军团", "瘟疫", "鬼面",
-                                                     "魔王", "鬼武士",
-                                                     "死亡枪手", "处刑者", "枯萎者", "连体婴", "骗术师", "NEMESIS",
-                                                     "地狱修士", "艺术家",
-                                                     "贞子页子", "影广影魔", "操纵者", "恶骑士", "白骨商人", "奇点",
-                                                     "异形",
-                                                     "好孩子", "未知恶物"],
-                              'all_killer_name_EN': ["TRAPPER", "WRAITH", "HILLBILLY", "NURSE", "HUNTRESS", "SHAPE",
-                                                     "HAG", "DOCTOR",
-                                                     "CANNIBAL", "NIGHTMARE", "PIG", "CLOWN", "SPIRIT", "LEGION",
-                                                     "PLAGUE", "GHOSTFACE", "DEMOGORGON", "ONI",
-                                                     "DEATHSLINGER", "EXECUTIONER", "BLIGHT", "TWINS", "TRICKSTER",
-                                                     "NEMESIS", "CENOBITE", "ARTIST", "ONRYO",
-                                                     "DREDGE", "MASTERMIND", "KNIGHT", "SKULLMERCHANT", "SINGULARITY",
-                                                     "XENOMORPH", "GOODGUY", "UNKNOWN"],
-                              'stage_judge_switch': 0}  # 阶段判断开关
+    self_defined_args = {'赛后发送消息': 'DBD-AFK League',
+                         '人类发送消息': 'AFK',
+                         '最大换行次数': 6,
+                         '女猎手所在位置的坐标': [404, 536],
+                         '角色第一行横坐标': [405, 548, 703, 854],
+                         '角色第一行纵坐标': [314, 323, 318, 302],
+                         '最后七个角色横坐标': [549, 709, 858, 384, 556, 715, 882],
+                         '最后七个角色纵坐标': [517, 528, 523, 753, 741, 749, 750],
+                         '角色回滚滚轮到最顶端的次数': 3,
+                         '开始游戏、准备就绪按钮的识别范围': [1446, 771, 1920, 1080],
+                         '结算页的识别范围': [56, 46, 370, 172],
+                         '结算页每日祭礼的识别范围': [106, 267, 430, 339],
+                         '段位重置的识别范围': [192, 194, 426, 291],
+                         '主界面的每日祭礼识别范围': [441, 255, 666, 343],
+                         '主页面开始按钮的识别范围': [187, 50, 317, 159],
+                         '断线检测的识别范围': [299, 614, 1796, 800],
+                         '新内容的识别范围': [548, 4, 1476, 256],
+                         'event_rewards': [],  # 未完成的事件奖励,留空即可
+                         '开始游戏和准备就绪按钮的坐标': [1742, 931],
+                         '段位重置按钮的坐标': [1468, 843],
+                         '结算页祭礼完成坐标': [396, 718, 140, 880],
+                         '结算页继续按钮坐标': [1761, 1009],
+                         '主页面新闻关闭坐标': [1413, 992],
+                         '主页面祭礼关闭坐标': [545, 880],
+                         '主页面开始坐标': [320, 100],
+                         '主页面逃生者坐标': [339, 320],
+                         '主页面杀手坐标': [328, 224],
+                         '匹配大厅的角色按钮坐标': [141, 109],
+                         '匹配大厅二值化阈值': [120, 130, 1],
+                         '准备房间二值化阈值': [120, 130, 1],
+                         '结算页二值化阈值': [80, 130, 1],
+                         '结算页每日祭礼二值化阈值': [120, 130, 1],
+                         '段位重置二值化阈值': [120, 130, 1],
+                         '主页面每日祭礼二值化阈值': [130, 130, 1],
+                         '主页面开始按钮二值化阈值': [130, 130, 1],
+                         '断线检测二值化阈值': [120, 130, 1],
+                         '新内容二值化阈值': [130, 130, 1],
+                         '准备取消按钮二值化阈值': [70, 130, 1]
+                         }
+
     # UI设置
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("picture\\dbdwindow.png"))
     dbd_window = DbdWindow()
-    # -------------------------------------------------------------------- 配置文件参数
+    sel_dialog = SelectWindow()
+    adv_dialog = AdvancedParameter()
+    tf_widget = TipForm()
+    shl_dialog = ShowLog()
+
+    # 配置文件参数
     cpci_keys = [
         "rb_survivor",
         "cb_survivor_do",
@@ -1927,6 +1817,11 @@ if __name__ == '__main__':
         "rb_random_mode"
     ]
     cpci_dict = {key: getattr(dbd_window.main_ui, key) for key in cpci_keys}
+
+    seki_keys = [
+        "cb_usefile"
+    ]
+    seki_dict = {key: getattr(sel_dialog.select_ui, key) for key in seki_keys}
 
     update_keys = [
         "cb_autocheck",
@@ -1945,42 +1840,45 @@ if __name__ == '__main__':
             "baigu", "jidian", "yixing", "qiaji", "ewu"
         ]
     ]
-    cussec_dict = {key: getattr(dbd_window.sel_dialog.select_ui, key) for key in cussec_keys}
+    cussec_dict = {key: getattr(sel_dialog.select_ui, key) for key in cussec_keys}
     # 合并所有部分到最终的 ui_components
     ui_components = {
         "CPCI": cpci_dict,
+        "SEKI": seki_dict,
         "UPDATE": update_dict,
         "CUSSEC": cussec_dict
     }
-    # --------------------------------------------------------------------------------------------
-    log = Logger(LOG_PATH)  # 日志
+
+    # 配置日志格式
+    log_format = '%(asctime)s - %(levelname)s - %(message)s'
+    # 配置文件处理器，将日志写入文件
+    file_handler = logging.FileHandler(LOG_PATH, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)  # 设置处理器的日志级别
+    formatter = logging.Formatter(log_format)
+    file_handler.setFormatter(formatter)
+    # 获取日志记录器对象
+    log = logging.getLogger(__name__)
+    log.addHandler(file_handler)
+    log.setLevel(logging.INFO)  # 设置记录器的日志级别
+    atexit.register(close_logger)  # 程序退出时关闭日志
+    atexit.register(del_jpg)  # 程序退出时删除图片
     cfg = ConfigParser()  # 配置文件
     cfg.read(CFG_PATH, encoding='utf-8')
+    settings = ConfigObj(CFG_PATH, default_encoding='utf8')
     initialize()
     read_cfg()
+
     if QLocale.system().language() != QLocale.Chinese or cfg.getboolean("UPDATE", "rb_english"):
         dbd_window.rb_english_change()
-    play_str = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
-    play_pau = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
-    play_res = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
-    play_end = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
     custom_select = CustomSelectKiller()
     screen = QApplication.primaryScreen()
-    # max_click = 0  # 最少点几次不会上升
-    # front_times = 0  # 可上升部分的循环次数
-    # behind_times = 0  # 不可上升后的循环次数
-    # x, y = 548, 323  # 初始的坐标值[Second]
     begin_state = False  # 开始状态
-    # 角色选择的参数
-    ghX = [405, 548, 703, 854]
-    ghY = [314, 323, 318, 302]
-    glX = [549, 709, 858, 384, 556, 715, 882]
-    glY = [517, 528, 523, 753, 741, 749, 750]
     character_num_b = 0  # 列表的下标
     character_num = []  # 列表，表示选择的角色序号
-    judge = 0
     circle = 0  # 选择的次数
+    judge = 0
     frequency = 0  # 换行的次数
+    # 动作标志
     pause = False  # 监听暂停标志
     stop_thread = False  # 检查tip标志
     stop_space = False  # 自动空格标志
@@ -1992,17 +1890,12 @@ if __name__ == '__main__':
     pause_event.set()
     hotkey = threading.Thread(target=listen_key, daemon=True)
     tip = threading.Thread(target=hall_tip, daemon=True)
-    checktip = threading.Thread(target=check_tip)
-    settings = ConfigObj(CFG_PATH, default_encoding='utf8')
     pytesseract.pytesseract.tesseract_cmd = OCR_PATH  # 配置OCR路径
-
     notice()  # 通知消息
     authorization()  # 授权验证
     hotkey.start()  # 热键监听
-    screen_age()
     if cfg.getboolean("UPDATE", "cb_autocheck"):  # 检查更新
         check_update()
     check_ocr()  # 检查初始化
-    notification = TransparentNotification()
     dbd_window.show()
     sys.exit(app.exec_())
