@@ -1205,13 +1205,6 @@ def reconnect() -> bool:
     time.sleep(2)
     stop_space = True  # 自动空格线程标志符
     stop_action = True  # 动作线程标志符
-    # moveclick(586, 679, cli
-    # moveclick(570, 710, click_delay=1)  # 错误代码2
-    # moveclick(594, 721, click_delay=1)  # 错误代码3
-    # moveclick(1334, 635, click_delay=1)  # 错误代码4
-    # moveclick(1429, 640, click_delay=1)  # 错误代码5
-    # moveclick(1389, 670, click_delay=1)  # 错误代码6
-    # moveclick(563, 722, click_delay=1)  # 错误代码7
     while disconnect_check():
         for sum in range(130, 80, -10):
             disconnect_confirm(sum)
