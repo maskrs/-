@@ -7,8 +7,8 @@ import time
 import webbrowser
 import win32api
 import win32con
-from tqdm import tqdm
 import requests
+from tqdm import tqdm
 
 
 def check_language():

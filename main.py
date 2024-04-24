@@ -89,6 +89,8 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui = Ui_MainWindow()
         self.trans = QTranslator()
         self.main_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\dbdwindow.png"))
+
         self.init_signals()
 
     def init_signals(self):
@@ -107,7 +109,8 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.pb_debug_tool.clicked.connect(self.pb_debug_tool_click)
 
 
-    def pb_search_click(self):
+    @staticmethod
+    def pb_search_click():
         tf_widget.tipform_ui.retranslateUi(tf_widget)
         tf_widget.loading_settings()
         tf_widget.show()
@@ -124,11 +127,13 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         sel_dialog.select_ui.retranslateUi(sel_dialog)
         sel_dialog.exec_()
 
-    def pb_advanced_click(self):
+    @staticmethod
+    def pb_advanced_click():
         adv_dialog.advanced_ui.retranslateUi(adv_dialog)
         adv_dialog.exec_()
 
-    def pb_debug_tool_click(self):
+    @staticmethod
+    def pb_debug_tool_click():
         debug_dialog.debugtool_ui.retranslateUi(debug_dialog)
         debug_dialog.exec_()
 
@@ -183,7 +188,8 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
             json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
 
-    def pb_showlog_click(self):
+    @staticmethod
+    def pb_showlog_click():
         shl_dialog.showlog_ui.retranslateUi(shl_dialog)
         shl_dialog.loading_settings()
         shl_dialog.exec_()
@@ -196,6 +202,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         super().__init__()
         self.select_ui = Ui_Dialog()
         self.select_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\choose.png"))
         self.select_ui.pb_all.clicked.connect(self.pb_select_all_click)
         self.select_ui.pb_invert.clicked.connect(self.pb_invert_click)
         self.select_ui.pb_save.clicked.connect(self.pb_save_click)
@@ -236,6 +243,7 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
         super().__init__()
         self.advanced_ui = Ui_AdvancedWindow()
         self.advanced_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\advanced.png"))
         # 控件到设置键的反向映射
         self.reverse_mapping = {
             self.advanced_ui.sb_maxenter: '最大换行次数',
@@ -277,6 +285,7 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
             self.advanced_ui.le_rolexy: '匹配大厅的角色按钮坐标',
         }
         self.load_settings()
+
         self.init_signals()
 
 
@@ -380,7 +389,18 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
         """获取更改后的数值"""
         for widget, setting_key in self.reverse_mapping.items():
             if isinstance(widget, QLineEdit):
-                settings_value = widget.text().strip()
+                settings_value = widget.text().split(',')
+                try:
+                    # 检查当前值的类型
+                    if isinstance(self_defined_args[setting_key][0], int):
+                        # 期望新值为整数
+                        settings_value = [int(item.strip()) for item in settings_value]
+                    elif isinstance(self_defined_args[setting_key][0], str):
+                        # 期望新值为字符串列表，这里假设以逗号分隔
+                        settings_value = [item.strip() for item in settings_value]
+                except ValueError:
+                    # 如果转换失败，返回原始文本值
+                    settings_value = widget.text()
             elif isinstance(widget, QSpinBox):
                 settings_value = widget.value()
             elif isinstance(widget, QTextEdit):
@@ -403,6 +423,8 @@ class TipForm(QWidget, Ui_TipForm):
         super().__init__()
         self.tipform_ui = Ui_TipForm()
         self.tipform_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\edit.png"))
+
         self.init_signals()
 
     def init_signals(self):
@@ -509,6 +531,7 @@ class ShowLog(QDialog, Ui_ShowLogDialog):
         super().__init__()
         self.showlog_ui = Ui_ShowLogDialog()
         self.showlog_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\log.png"))
 
     def loading_settings(self):
         try:
@@ -528,6 +551,7 @@ class DebugTool(QDialog, Ui_DebugDialog):
         super().__init__()
         self.debugtool_ui = Ui_DebugDialog()
         self.debugtool_ui.setupUi(self)
+        self.setWindowIcon(QIcon("picture\\tool.png"))
 
         self.init_signals()
 
@@ -557,7 +581,6 @@ class DebugTool(QDialog, Ui_DebugDialog):
             debug_dialog.debugtool_ui.pb_test.setText("测试中")
             ocr_result = img_ocr(self.selector.start_x, self.selector.start_y, self.selector.end_x, self.selector.end_y,
                                  "debug_test", sum_number)
-
             if any(keyword in ocr_result for keyword in key_words):
                 debug_dialog.debugtool_ui.lb_result.setText(f"识别成功！\n二值化值为：{sum_number}")
                 break
@@ -617,7 +640,7 @@ class BoxSelector:
     def on_button_release(self, event):
         if self.rect_id is not None:
             self.end_x, self.end_y = event.x, event.y
-            # print(f"Selected Box: From {(self.start_x, self.start_y)} to {(self.end_x, self.end_y)}")
+            print(f"Selected Box: From {(self.start_x, self.start_y)} to {(self.end_x, self.end_y)}")
             self.master.destroy()  # 用户完成选框后退出程序
 
         debug_dialog.debugtool_ui.le_coord.setText(f"{self.start_x},{self.start_y},{self.end_x},{self.end_y}")
@@ -916,7 +939,7 @@ def check_ocr():
 
 def notice():
     """take a message"""
-    notice_now = 'test giw'
+    notice_now = 'test git'
     html_str = requests.get('https://gitee.com/kioley/test-git').content.decode()
     notice_new = re.search('title>(.*?)<', html_str, re.S).group(1)[0:8]
     notice = re.search('title>(.*?)<', html_str, re.S).group(1)[9:]
@@ -1045,9 +1068,9 @@ def ocr_range_inspection(identification_key: str,
             keywords = self_defined_args[identification_key]
 
             # 调用img_ocr函数，传入固定坐标和阈值
-            ocr_result = ocr_func(x1, y1, x2, y2, name, sum=threshold)
+            ocr_result = ocr_func(x1, y1, x2, y2, ocrname=name, sum=threshold)
             if dbd_window.main_ui.cb_debug.isChecked():
-                log.debug(f"{name}.OCR result is:{ocr_result}")
+                log.info(f"DEBUG -{name}.OCR result is:{ocr_result}")
 
             if any(keyword in ocr_result for keyword in keywords):
 
@@ -1073,15 +1096,15 @@ def ocr_range_inspection(identification_key: str,
     return decorator
 
 
-def img_ocr(x1, y1, x2, y2, name, sum=128) -> str:
+def img_ocr(x1, y1, x2, y2, ocrname, sum=128) -> str:
     """OCR识别图像，返回字符串
     :return: string"""
     result = " "
     ocrXY = [x1, y1, x2, y2]
-    image = screen.grabWindow(hwnd).toImage()
+    image = screen.grabWindow(0).toImage()
     # 生成唯一的文件名
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = f"image_{timestamp}_{name}.jpg"
+    filename = f"image_{timestamp}_{ocrname}.jpg"
     image.save(filename)
     time.sleep(1)
     try:
@@ -1236,7 +1259,7 @@ def disconnect_confirm(sum=120) -> None:
     disconnect_check_colorXY = self_defined_args['断线检测的识别范围']
 
     screen = QApplication.primaryScreen()
-    image = screen.grabWindow(hwnd).toImage()
+    image = screen.grabWindow(0).toImage()
 
     # 生成唯一的文件名
     timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -1906,7 +1929,7 @@ if __name__ == '__main__':
                          '断线检测识别关键字': ["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
                          '新内容的识别范围': [548, 4, 1476, 256],
                          '新内容识别关键字': ["新内容", "NEW CONTENT"],
-                         'event_rewards': [],  # 未完成的事件奖励,留空即可
+                         'event_rewards': ["-"],  # 未完成的事件奖励,留空即可
                          '开始游戏和准备就绪按钮的坐标': [1742, 931],
                          '段位重置按钮的坐标': [1468, 843],
                          '结算页祭礼完成坐标': [396, 718, 140, 880],
@@ -1932,7 +1955,6 @@ if __name__ == '__main__':
     # UI设置
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("picture\\dbdwindow.png"))
     dbd_window = DbdWindow()
     sel_dialog = SelectWindow()
     adv_dialog = AdvancedParameter()

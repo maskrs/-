@@ -431,5 +431,5 @@ class Ui_MainWindow(object):
         self.pb_showlog.setText(_translate("MainWindow", "显示日志"))
         self.pb_advanced.setText(_translate("MainWindow", "高 级..."))
         self.pb_debug_tool.setText(_translate("MainWindow", "调试工具"))
-        self.lb_version.setText(_translate("MainWindow", "Pro 2.0"))
+        self.lb_version.setText(_translate("MainWindow", "Pro 2.1"))
         self.lb_message.setText(_translate("MainWindow", "Q群：728284728"))

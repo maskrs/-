@@ -2,12 +2,12 @@
 import locale
 import os
 import sys
-import subprocess
 import shutil
 import win32api
 import win32con
 import win32gui
 import configparser
+import subprocess
 
 def check_language():
     system_language, _ = locale.getdefaultlocale()
