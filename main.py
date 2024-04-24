@@ -1413,6 +1413,8 @@ def reconnect() -> bool:
                 moveclick(self_defined_args['结算页继续按钮坐标'][0], self_defined_args['结算页继续按钮坐标'][1])
                 moveclick(10, 10)  # 避免遮挡
                 main_quit = True
+            elif starthall():
+                main_quit = True
         log.info(f"重连完成···断线")
         return True
 
