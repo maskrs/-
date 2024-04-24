@@ -566,12 +566,55 @@
          </widget>
          <widget class="QWidget" name="page_2">
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="11" column="1">
-            <widget class="QLabel" name="lb_new">
-             <property name="text">
-              <string>新内容的识别范围</string>
+           <item row="10" column="3">
+            <widget class="QLineEdit" name="le_orites_keywords"/>
+           </item>
+           <item row="8" column="3">
+            <widget class="QLineEdit" name="le_over_keywords"/>
+           </item>
+           <item row="7" column="3">
+            <widget class="QLineEdit" name="le_over_area">
+             <property name="contextMenuPolicy">
+              <enum>Qt::DefaultContextMenu</enum>
              </property>
             </widget>
+           </item>
+           <item row="4" column="4">
+            <spacer name="horizontalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="4" column="0">
+            <spacer name="horizontalSpacer_13">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="lb_play_area">
+             <property name="text">
+              <string>开始游戏、准备就绪
+按钮的识别范围</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLineEdit" name="le_play_keywords"/>
            </item>
            <item row="4" column="3">
             <widget class="QLineEdit" name="le_play_area">
@@ -589,32 +632,14 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="lb_play_area">
-             <property name="text">
-              <string>开始游戏、准备就绪
-按钮的识别范围</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="1">
-            <widget class="QLabel" name="lb_dr_main">
-             <property name="text">
-              <string>主界面的每日祭礼识
-别范围</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="3">
-            <widget class="QLineEdit" name="le_dccheck"/>
-           </item>
-           <item row="11" column="3">
-            <widget class="QLineEdit" name="le_news"/>
-           </item>
-           <item row="7" column="3">
-            <widget class="QLineEdit" name="le_season_reset"/>
-           </item>
            <item row="6" column="1">
+            <widget class="QLabel" name="lb_ready_keywords">
+             <property name="text">
+              <string>准备大厅识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="1">
             <widget class="QLabel" name="lb_over_rites">
              <property name="text">
               <string>结算页每日祭礼的识
@@ -622,11 +647,32 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="3">
-            <widget class="QLineEdit" name="le_mainjudge"/>
-           </item>
            <item row="6" column="3">
+            <widget class="QLineEdit" name="le_ready_keywords"/>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="lb_play_keywords">
+             <property name="text">
+              <string>匹配大厅识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLabel" name="lb_over_keywords">
+             <property name="text">
+              <string>结算页识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="3">
             <widget class="QLineEdit" name="le_orites_area"/>
+           </item>
+           <item row="11" column="1">
+            <widget class="QLabel" name="lb_season_reset">
+             <property name="text">
+              <string>段位重置的识别范围</string>
+             </property>
+            </widget>
            </item>
            <item row="4" column="2">
             <spacer name="horizontalSpacer_12">
@@ -641,80 +687,181 @@
              </property>
             </spacer>
            </item>
-           <item row="5" column="1">
+           <item row="10" column="1">
+            <widget class="QLabel" name="lb_or_keywords">
+             <property name="text">
+              <string>结算页每日祭礼识别
+关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="11" column="3">
+            <widget class="QLineEdit" name="le_season_reset"/>
+           </item>
+           <item row="7" column="1">
             <widget class="QLabel" name="lb_over_area">
              <property name="text">
               <string>结算页的识别范围</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="4">
-            <spacer name="horizontalSpacer_11">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="10" column="1">
-            <widget class="QLabel" name="lb_dccheck">
+           <item row="12" column="1">
+            <widget class="QLabel" name="lb_sr_keywords">
              <property name="text">
-              <string>断线检测的识别范围</string>
+              <string>段位重置识别关键字</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="3">
-            <widget class="QLineEdit" name="le_over_area">
-             <property name="contextMenuPolicy">
-              <enum>Qt::DefaultContextMenu</enum>
-             </property>
-            </widget>
+           <item row="12" column="3">
+            <widget class="QLineEdit" name="le_sr_keywords"/>
            </item>
-           <item row="9" column="1">
-            <widget class="QLabel" name="lb_mainjudge">
-             <property name="text">
-              <string>主页面开始按钮的识
-别范围</string>
-             </property>
-            </widget>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="page_4">
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="4" column="3">
+            <widget class="QLineEdit" name="le_dccheck"/>
            </item>
            <item row="8" column="3">
-            <widget class="QLineEdit" name="le_dr_main"/>
+            <widget class="QLineEdit" name="le_evrewards"/>
            </item>
-           <item row="4" column="0">
-            <spacer name="horizontalSpacer_13">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
+           <item row="2" column="3">
+            <widget class="QLineEdit" name="le_mainjudge"/>
            </item>
-           <item row="7" column="1">
-            <widget class="QLabel" name="lb_season_reset">
-             <property name="text">
-              <string>段位重置的识别范围</string>
-             </property>
-            </widget>
-           </item>
-           <item row="12" column="1">
+           <item row="8" column="1">
             <widget class="QLabel" name="lb_evrewards">
              <property name="text">
               <string>事件奖励</string>
              </property>
             </widget>
            </item>
-           <item row="12" column="3">
-            <widget class="QLineEdit" name="le_evrewards"/>
+           <item row="0" column="0">
+            <spacer name="horizontalSpacer_17">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="lb_mainjudge_keywords">
+             <property name="text">
+              <string>主页面识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="lb_dr_main">
+             <property name="text">
+              <string>主界面的每日祭礼识
+别范围</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QLabel" name="lb_new">
+             <property name="text">
+              <string>新内容的识别范围</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QLineEdit" name="le_news"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="lb_drm_keywords">
+             <property name="text">
+              <string>主页面每日祭礼识别
+关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <spacer name="horizontalSpacer_19">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLineEdit" name="le_dr_main">
+             <property name="minimumSize">
+              <size>
+               <width>165</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>165</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLineEdit" name="le_dccheck_keywords"/>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="lb_dccheck_keywords">
+             <property name="text">
+              <string>断线检测识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <spacer name="horizontalSpacer_18">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="lb_mainjudge">
+             <property name="text">
+              <string>主页面的识别范围</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="lb_dccheck">
+             <property name="text">
+              <string>断线检测的识别范围</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLineEdit" name="le_drm_keywords"/>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLineEdit" name="le_mainjudge_keywords"/>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLabel" name="lb_new_keywords">
+             <property name="text">
+              <string>新内容识别关键字</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="3">
+            <widget class="QLineEdit" name="le_new_keywords"/>
            </item>
           </layout>
          </widget>
@@ -875,6 +1022,13 @@
        <item>
         <widget class="QWidget" name="widget" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:600; color:#ff0000;&quot;&gt;必须&lt;/span&gt;使用&lt;span style=&quot; font-size:10pt; font-weight:600; text-decoration: underline; color:#00aa00;&quot;&gt;英文逗号&lt;/span&gt;分隔&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QPushButton" name="pb_previous">
             <property name="maximumSize">

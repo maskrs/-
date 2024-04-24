@@ -446,10 +446,13 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="cb_autocheck">
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="cb_survivor_do">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="text">
-          <string>自动检查更新</string>
+          <string>人类大厅提醒</string>
          </property>
         </widget>
        </item>
@@ -466,17 +469,14 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QCheckBox" name="cb_survivor_do">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="cb_autocheck">
          <property name="text">
-          <string>人类大厅提醒</string>
+          <string>自动检查更新</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
+       <item row="3" column="0" colspan="2">
         <widget class="QCheckBox" name="cb_killer_do">
          <property name="enabled">
           <bool>true</bool>
@@ -489,6 +489,13 @@
          </property>
          <property name="checked">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="cb_debug">
+         <property name="text">
+          <string>调试模式</string>
          </property>
         </widget>
        </item>
@@ -713,19 +720,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" alignment="Qt::AlignLeft|Qt::AlignTop">
-           <widget class="QPushButton" name="pb_advanced">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>高 级...</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="2">
            <widget class="QPushButton" name="pb_stop">
             <property name="sizePolicy">
@@ -799,6 +793,38 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" alignment="Qt::AlignLeft|Qt::AlignTop">
+           <widget class="QPushButton" name="pb_advanced">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>高 级...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QPushButton" name="pb_debug_tool">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>75</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>调试工具</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -844,7 +870,7 @@
              <string notr="true">color: rgb(130, 60, 200);</string>
             </property>
             <property name="text">
-             <string>Pro 1.0</string>
+             <string>Pro 2.0</string>
             </property>
            </widget>
           </item>

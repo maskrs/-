@@ -10,9 +10,8 @@ import sys
 import threading
 import time
 import webbrowser
-from configparser import ConfigParser
-from operator import lt, eq, gt, ge, ne, floordiv, mod
 import pyautogui as py
+import tkinter as tk
 import pytesseract
 import re
 import requests
@@ -21,8 +20,10 @@ import win32con
 import win32gui
 import keyboard
 import logging
+from configparser import ConfigParser
+from operator import lt, eq, gt, ge, ne, floordiv, mod
 from PIL import Image
-from PyQt5.QtCore import QTranslator, QLocale, Qt
+from PyQt5.QtCore import QTranslator, QLocale, Qt, QCoreApplication
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import *
 from configobj import ConfigObj
@@ -31,9 +32,10 @@ from selec_killerUI import Ui_Dialog
 from AdvancedParameterUI import Ui_AdvancedWindow
 from TipForm import Ui_TipForm
 from ShowLog import Ui_ShowLogDialog
+from DebugTool import Ui_DebugDialog
 from keyboard_operation import key_down, key_up
 from simpleaudio import WaveObject
-from typing import Callable, List
+from typing import Callable
 
 
 def begin():
@@ -102,6 +104,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui.cb_bvinit.clicked.connect(self.cb_bvinit_click)
         self.main_ui.pb_advanced.clicked.connect(self.pb_advanced_click)
         self.main_ui.pb_showlog.clicked.connect(self.pb_showlog_click)
+        self.main_ui.pb_debug_tool.clicked.connect(self.pb_debug_tool_click)
 
 
     def pb_search_click(self):
@@ -124,6 +127,10 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
     def pb_advanced_click(self):
         adv_dialog.advanced_ui.retranslateUi(adv_dialog)
         adv_dialog.exec_()
+
+    def pb_debug_tool_click(self):
+        debug_dialog.debugtool_ui.retranslateUi(debug_dialog)
+        debug_dialog.exec_()
 
     def rb_chinese_change(self):
         # 默认的中文包，不要新建
@@ -241,13 +248,22 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
             self.advanced_ui.te_lasty: '最后七个角色纵坐标',
             self.advanced_ui.sb_backfirst: '角色回滚滚轮到最顶端的次数',
             self.advanced_ui.le_play_area: '开始游戏、准备就绪按钮的识别范围',
+            self.advanced_ui.le_play_keywords: '匹配大厅识别关键字',
+            self.advanced_ui.le_ready_keywords: '准备大厅识别关键字',
             self.advanced_ui.le_over_area: '结算页的识别范围',
+            self.advanced_ui.le_over_keywords: '结算页识别关键字',
             self.advanced_ui.le_orites_area: '结算页每日祭礼的识别范围',
+            self.advanced_ui.le_orites_keywords: '结算页每日祭礼识别关键字',
             self.advanced_ui.le_season_reset: '段位重置的识别范围',
+            self.advanced_ui.le_sr_keywords: '段位重置识别关键字',
             self.advanced_ui.le_dr_main: '主界面的每日祭礼识别范围',
-            self.advanced_ui.le_mainjudge: '主页面开始按钮的识别范围',
+            self.advanced_ui.le_drm_keywords: '主页面每日祭礼识别关键字',
+            self.advanced_ui.le_mainjudge: '主页面的识别范围',
+            self.advanced_ui.le_mainjudge_keywords: '主页面识别关键字',
             self.advanced_ui.le_dccheck: '断线检测的识别范围',
+            self.advanced_ui.le_dccheck_keywords: '断线检测识别关键字',
             self.advanced_ui.le_news: '新内容的识别范围',
+            self.advanced_ui.le_new_keywords: '新内容识别关键字',
             self.advanced_ui.le_evrewards: 'event_rewards',
             self.advanced_ui.le_playxy: '开始游戏和准备就绪按钮的坐标',
             self.advanced_ui.le_seasonresetxy: '段位重置按钮的坐标',
@@ -262,6 +278,7 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
         }
         self.load_settings()
         self.init_signals()
+
 
     def init_signals(self):
         """初始化信号和槽连接"""
@@ -279,29 +296,6 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
         self.advanced_ui.pb_previous.clicked.connect(self.pb_prev_click)
         self.advanced_ui.pb_save.clicked.connect(self.pb_save_click)
 
-    def pb_next_click(self):
-        index = self.advanced_ui.stackedWidget.currentIndex()
-        if index >= 2:
-            index = 0
-        else:
-            index = index + 1
-        self.advanced_ui.stackedWidget.setCurrentIndex(index)
-
-    def pb_prev_click(self):
-        index = self.advanced_ui.stackedWidget.currentIndex()
-        if index <= 0:
-            index = 2
-        else:
-            index = index - 1
-        self.advanced_ui.stackedWidget.setCurrentIndex(index)
-
-    @staticmethod
-    def pb_save_click():
-        # 将更新后的键值对写回文件
-        with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
-            json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
-        win32api.MessageBox(0, "保存成功", "提醒", win32con.MB_ICONASTERISK)
-
     def load_settings(self):
         """初始化加载设置文件内容"""
         # 定义控件映射字典，键是 self_defined_args 中的键，值是控件的属性和方法
@@ -316,13 +310,22 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
             '最后七个角色纵坐标': (self.advanced_ui.te_lasty, 'setText'),
             '角色回滚滚轮到最顶端的次数': (self.advanced_ui.sb_backfirst, 'setValue'),
             '开始游戏、准备就绪按钮的识别范围': (self.advanced_ui.le_play_area, 'setText'),
+            '匹配大厅识别关键字': (self.advanced_ui.le_play_keywords, 'setText'),
+            '准备大厅识别关键字': (self.advanced_ui.le_ready_keywords, 'setText'),
             '结算页的识别范围': (self.advanced_ui.le_over_area, 'setText'),
+            '结算页识别关键字': (self.advanced_ui.le_over_keywords, 'setText'),
             '结算页每日祭礼的识别范围': (self.advanced_ui.le_orites_area, 'setText'),
+            '结算页每日祭礼识别关键字': (self.advanced_ui.le_orites_keywords, 'setText'),
             '段位重置的识别范围': (self.advanced_ui.le_season_reset, 'setText'),
+            '段位重置识别关键字': (self.advanced_ui.le_sr_keywords, 'setText'),
             '主界面的每日祭礼识别范围': (self.advanced_ui.le_dr_main, 'setText'),
-            '主页面开始按钮的识别范围': (self.advanced_ui.le_mainjudge, 'setText'),
+            '主页面每日祭礼识别关键字': (self.advanced_ui.le_drm_keywords, 'setText'),
+            '主页面的识别范围': (self.advanced_ui.le_mainjudge, 'setText'),
+            '主页面识别关键字': (self.advanced_ui.le_mainjudge_keywords, 'setText'),
             '断线检测的识别范围': (self.advanced_ui.le_dccheck, 'setText'),
+            '断线检测识别关键字': (self.advanced_ui.le_dccheck_keywords, 'setText'),
             '新内容的识别范围': (self.advanced_ui.le_news, 'setText'),
+            '新内容识别关键字': (self.advanced_ui.le_new_keywords, 'setText'),
             'event_rewards': (self.advanced_ui.le_evrewards, 'setText'),
             '开始游戏和准备就绪按钮的坐标': (self.advanced_ui.le_playxy, 'setText'),
             '段位重置按钮的坐标': (self.advanced_ui.le_seasonresetxy, 'setText'),
@@ -350,6 +353,28 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
             else:
                 QMessageBox.warning(self, "错误", "键值不在参数文件中")
 
+    def pb_next_click(self):
+        index = self.advanced_ui.stackedWidget.currentIndex()
+        if index >= 3:
+            pass
+        else:
+            index = index + 1
+        self.advanced_ui.stackedWidget.setCurrentIndex(index)
+
+    def pb_prev_click(self):
+        index = self.advanced_ui.stackedWidget.currentIndex()
+        if index <= 0:
+            pass
+        else:
+            index = index - 1
+        self.advanced_ui.stackedWidget.setCurrentIndex(index)
+
+    @staticmethod
+    def pb_save_click():
+        # 将更新后的键值对写回文件
+        with open(SDAGRS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(self_defined_args, f, indent=4, ensure_ascii=False)
+        win32api.MessageBox(0, "保存成功", "提醒", win32con.MB_ICONASTERISK)
 
     def update_settings(self):
         """获取更改后的数值"""
@@ -366,18 +391,9 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
             elif setting_key in ['赛后发送消息', '人类发送消息']:
                 self_defined_args[setting_key] = settings_value
             else:
-                # 对于坐标等需要整数列表的设置，进行额外的验证
-                if settings_value:  # 确保输入不为空
-                    try:
-                        # 使用正则表达式分割字符串，排除英文逗号和空格
-                        tokens = re.split(r",\s*", settings_value)
-                        tokens = [int(token) for token in tokens if token]
-                        self_defined_args[setting_key] = tokens
-                    except ValueError:
-                        QMessageBox.warning(self, '错误', '请输入整数并使用英文逗号分隔')
-                else:
-                    # 如果输入为空，则不更新该设置
-                    self_defined_args[setting_key] = []
+                self_defined_args[setting_key] = settings_value
+
+            # print(self_defined_args)
 
 
 
@@ -503,6 +519,117 @@ class ShowLog(QDialog, Ui_ShowLogDialog):
             win32api.MessageBox(0, "\"debug_data.log\"文件不存在", "错误", win32con.MB_ICONERROR, win32con.MB_OK)
         except Exception as e:
             win32api.MessageBox(0, f"读取文件时出错:{e}", "警告  ", win32con.MB_ICONWARNING, win32con.MB_OK)
+
+
+
+
+class DebugTool(QDialog, Ui_DebugDialog):
+    def __init__(self):
+        super().__init__()
+        self.debugtool_ui = Ui_DebugDialog()
+        self.debugtool_ui.setupUi(self)
+
+        self.init_signals()
+
+    def init_signals(self):
+        self.debugtool_ui.pb_selection_region.clicked.connect(self.pb_selection_region_click)
+        self.debugtool_ui.pb_test.clicked.connect(self.pb_test_click)
+
+    def pb_selection_region_click(self):
+        self.root = tk.Tk()
+        self.selector = BoxSelector(self.root)
+        self.root.mainloop()
+
+    def pb_test_click(self):
+        coord_xy = debug_dialog.debugtool_ui.le_coord.text()
+        if not coord_xy:
+            debug_dialog.debugtool_ui.lb_result.setText("请先框选区域！")
+            return
+
+        key_words = self.debugtool_ui.le_keywords.text().split(",")
+        # print(key_words)
+        if not key_words or all(not item.strip() for item in key_words):
+            debug_dialog.debugtool_ui.lb_result.setText("请输入关键字！")
+            return
+
+        for sum_number in range(130, 20, -10):
+            debug_dialog.debugtool_ui.pb_test.setDisabled(True)
+            debug_dialog.debugtool_ui.pb_test.setText("测试中")
+            ocr_result = img_ocr(self.selector.start_x, self.selector.start_y, self.selector.end_x, self.selector.end_y,
+                                 "debug_test", sum_number)
+
+            if any(keyword in ocr_result for keyword in key_words):
+                debug_dialog.debugtool_ui.lb_result.setText(f"识别成功！\n二值化值为：{sum_number}")
+                break
+            else:
+                debug_dialog.debugtool_ui.lb_result.setText(f"未识别···\n二值化值为：{sum_number}")
+
+            # 添加延迟
+            time.sleep(0.1)  # 等待0.1秒
+            # 处理事件队列
+            QCoreApplication.processEvents()
+
+        debug_dialog.debugtool_ui.pb_test.setEnabled(True)
+        debug_dialog.debugtool_ui.pb_test.setText("测 试")
+        del_jpg()
+
+
+
+
+class BoxSelector:
+    def __init__(self, master):
+        self.master = master
+        master.overrideredirect(True)  # 移除窗口边框
+        # 设置窗口置顶
+        master.wm_attributes('-topmost', 1)
+        # 获取屏幕宽度和高度，并移动窗口到屏幕左上角
+        width = master.winfo_screenwidth()
+        height = master.winfo_screenheight()
+        master.geometry(f"{width}x{height}+0+0")
+        # 设置窗口背景透明，如果不支持，将使用白色背景
+        try:
+            master.wm_attributes('-alpha', 0.3)
+        except tk.TclError:
+            master.configure(background='white')
+
+        self.canvas = tk.Canvas(master, cursor="cross", bg="white")
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.canvas.bind('<ButtonPress-1>', self.on_button_press)
+        self.canvas.bind('<B1-Motion>', self.on_drag)
+        self.canvas.bind('<ButtonRelease-1>', self.on_button_release)
+        master.bind('<Button-3>', self.on_right_click)
+
+        # 初始化坐标变量
+        self.start_x = self.start_y = self.end_x = self.end_y = None
+        self.rect_id = None
+
+    def on_button_press(self, event):
+        self.start_x, self.start_y = event.x, event.y
+        bright_red = "#FF0000"  # 鲜红色
+        self.rect_id = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y,
+                                                    outline=bright_red, width=2)
+
+    def on_drag(self, event):
+        if self.rect_id is not None:
+            self.canvas.coords(self.rect_id, self.start_x, self.start_y, event.x, event.y)
+
+    def on_button_release(self, event):
+        if self.rect_id is not None:
+            self.end_x, self.end_y = event.x, event.y
+            # print(f"Selected Box: From {(self.start_x, self.start_y)} to {(self.end_x, self.end_y)}")
+            self.master.destroy()  # 用户完成选框后退出程序
+
+        debug_dialog.debugtool_ui.le_coord.setText(f"{self.start_x},{self.start_y},{self.end_x},{self.end_y}")
+
+    def on_right_click(self, event):
+        # 清除 canvas 上的所有内容
+        self.canvas.delete("all")
+        # 重置起始和结束坐标
+        self.start_x = self.start_y = self.end_x = self.end_y = None
+        # 重置 rect_id
+        self.rect_id = None
+        self.master.destroy()
 
 
 
@@ -746,7 +873,7 @@ def authorization():
 
 def check_update():
     """check the update"""
-    ver_now = 'V5.1.8'
+    ver_now = 'V5.1.9'
     html_str = requests.get('https://gitee.com/kioley/DBD_AFK_TOOL').content.decode()
     ver_new = re.search('title>(.*?)<', html_str, re.S).group(1)[13:19]
     if ne(ver_now, ver_new):
@@ -819,7 +946,6 @@ def hall_tip():
     while True:
         if readyhall():
             py.press('enter')
-            py.press('delete', 3)
             py.typewrite(self_defined_args['人类发送消息'])
             py.press('enter')
             time.sleep(20)
@@ -832,7 +958,7 @@ def autospace():
     while not stop_space:
         if not pause:
             key_down(hwnd, 'space')
-            time.sleep(5)
+            time.sleep(7)
 
 
 def action():
@@ -896,15 +1022,15 @@ def listen_key():
         keyboard.unhook_all_hotkeys()
 
 
-def ocr_range_inspection(keywords: List[str],
+def ocr_range_inspection(identification_key: str,
                          ocr_func: Callable,
-                         args_name: str,
+                         capture_range: str,
                          min_sum_name: str,
                          name: str) -> Callable:
     """装饰器工厂，生成OCR识别函数，根据阈值范围和关键字进行识别
-    :param keywords: 关键字列表，list
+    :param identification_key: 关键字列表名称，str
     :param ocr_func: 图像识别函数，Callable
-    :param args_name: 自定义参数的名称，str
+    :param capture_range: 自定义参数的名称，str
     :param min_sum_name: 最小阈值的名称，str
     :param name: 图片命名，str
     :return: Callable
@@ -913,12 +1039,15 @@ def ocr_range_inspection(keywords: List[str],
     def decorator(func):
         @functools.wraps(func)
         def wrapper():
-            x1, y1, x2, y2 = self_defined_args[args_name]
+            x1, y1, x2, y2 = self_defined_args[capture_range]
             threshold = self_defined_args[min_sum_name][0]
             threshold_high = self_defined_args[min_sum_name][1]
+            keywords = self_defined_args[identification_key]
 
             # 调用img_ocr函数，传入固定坐标和阈值
             ocr_result = ocr_func(x1, y1, x2, y2, name, sum=threshold)
+            if dbd_window.main_ui.cb_debug.isChecked():
+                log.debug(f"{name}.OCR result is:{ocr_result}")
 
             if any(keyword in ocr_result for keyword in keywords):
 
@@ -996,7 +1125,7 @@ def img_ocr(x1, y1, x2, y2, name, sum=128) -> str:
     return result
 
 
-@ocr_range_inspection(["开始", "PLAY"],
+@ocr_range_inspection('匹配大厅识别关键字',
                       img_ocr, '开始游戏、准备就绪按钮的识别范围', '匹配大厅二值化阈值', "play")
 def starthall() -> bool:
     """check the start  hall
@@ -1004,7 +1133,7 @@ def starthall() -> bool:
     pass
 
 
-@ocr_range_inspection(["准备", "READY"],
+@ocr_range_inspection('准备大厅识别关键字',
                       img_ocr, '开始游戏、准备就绪按钮的识别范围', '准备房间二值化阈值', "ready")
 def readyhall() -> bool:
     """check the  ready hall
@@ -1012,7 +1141,7 @@ def readyhall() -> bool:
     pass
 
 
-@ocr_range_inspection(["取消", "CANCEL"],
+@ocr_range_inspection('准备取消按钮识别关键字',
                       img_ocr, '开始游戏、准备就绪按钮的识别范围', '准备取消按钮二值化阈值', "cancel")
 def readycancle() -> bool:
     """检查游戏准备后的取消，消失就进入对局加载
@@ -1020,7 +1149,7 @@ def readycancle() -> bool:
     pass
 
 
-@ocr_range_inspection(["比", "分", "你", "MATCH", "SCORE"],
+@ocr_range_inspection('结算页识别关键字',
                       img_ocr, '结算页的识别范围', '结算页二值化阈值', "gameover")
 def gameover() -> bool:
     """检查对局后的继续
@@ -1028,7 +1157,7 @@ def gameover() -> bool:
     pass
 
 
-@ocr_range_inspection(["每日", "DAILY RITUALS"],
+@ocr_range_inspection('结算页每日祭礼识别关键字',
                       img_ocr, '结算页每日祭礼的识别范围', '结算页每日祭礼二值化阈值', "rites")
 def rites() -> bool:
     """check rites complete
@@ -1046,7 +1175,7 @@ def rites() -> bool:
 # eventXY.area_check()
 
 
-@ocr_range_inspection(["重置", "RESET"],
+@ocr_range_inspection('段位重置识别关键字',
                       img_ocr, '段位重置的识别范围', '段位重置二值化阈值', "reset")
 def season_reset() -> bool:
     """check the season reset
@@ -1054,7 +1183,7 @@ def season_reset() -> bool:
     pass
 
 
-@ocr_range_inspection(["每日", "DAILY RITUALS"],
+@ocr_range_inspection('主页面每日祭礼识别关键字',
                       img_ocr, '主界面的每日祭礼识别范围', '主页面每日祭礼二值化阈值', "daily_ritual_main")
 def daily_ritual_main() -> bool:
     """check the daily task after serious disconnect -->[main]
@@ -1063,8 +1192,8 @@ def daily_ritual_main() -> bool:
     pass
 
 
-@ocr_range_inspection(["开始", "PLAY"],
-                      img_ocr, '主页面开始按钮的识别范围', '主页面开始按钮二值化阈值', "start")
+@ocr_range_inspection('主页面识别关键字',
+                      img_ocr, '主页面的识别范围', '主页面开始按钮二值化阈值', "start")
 def mainjudge() -> bool:
     """after serious disconnect.
     check the game whether return the main menu. -->[quit button]
@@ -1073,7 +1202,7 @@ def mainjudge() -> bool:
     pass
 
 
-@ocr_range_inspection(["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
+@ocr_range_inspection('断线检测识别关键字',
                       img_ocr, '断线检测的识别范围', '断线检测二值化阈值', "disconnect")
 def disconnect_check() -> bool:
     """After disconnect check the connection status
@@ -1081,7 +1210,7 @@ def disconnect_check() -> bool:
     pass
 
 
-@ocr_range_inspection(["新内容", "NEW CONTENT"],
+@ocr_range_inspection('新内容识别关键字',
                       img_ocr, '新内容的识别范围', '新内容二值化阈值', "news")
 def news() -> bool:
     """断线重连后的新闻
@@ -1650,15 +1779,15 @@ def afk() -> None:
         游戏载入
         '''
 
-        game_load = False
-        while not game_load:
-            if event.is_set():
-                break
-            if not pause_event.is_set():
-                pause_event.wait()
-            if not readycancle():
-                game_load = True
-                time.sleep(5)
+        # game_load = False
+        # while not game_load:
+        #     if event.is_set():
+        #         break
+        #     if not pause_event.is_set():
+        #         pause_event.wait()
+        #     if not readycancle():
+        #         game_load = True
+        #         time.sleep(5)
 
         '''
         局内与局后
@@ -1760,13 +1889,23 @@ if __name__ == '__main__':
                          '最后七个角色纵坐标': [517, 528, 523, 753, 741, 749, 750],
                          '角色回滚滚轮到最顶端的次数': 3,
                          '开始游戏、准备就绪按钮的识别范围': [1446, 771, 1920, 1080],
+                         '匹配大厅识别关键字': ["开始游戏", "PLAY"],
+                         '准备大厅识别关键字': ["准备就绪", "READY"],
+                         '准备取消按钮识别关键字': ["取消", "CANCEL"],
                          '结算页的识别范围': [56, 46, 370, 172],
+                         '结算页识别关键字': ["比赛", "得分", "你的", "MATCH", "SCORE"],
                          '结算页每日祭礼的识别范围': [106, 267, 430, 339],
+                         '结算页每日祭礼识别关键字': ["每日", "DAILY RITUALS"],
                          '段位重置的识别范围': [192, 194, 426, 291],
+                         '段位重置识别关键字': ["重置", "RESET"],
                          '主界面的每日祭礼识别范围': [441, 255, 666, 343],
-                         '主页面开始按钮的识别范围': [187, 50, 317, 159],
+                         '主页面每日祭礼识别关键字': ["每日", "DAILY RITUALS"],
+                         '主页面的识别范围': [187, 50, 317, 159],
+                         '主页面识别关键字': ["开始", "PLAY"],
                          '断线检测的识别范围': [299, 614, 1796, 800],
+                         '断线检测识别关键字': ["好的", "关闭", "OK", "CLOSE", "继续", "CONTINUE"],
                          '新内容的识别范围': [548, 4, 1476, 256],
+                         '新内容识别关键字': ["新内容", "NEW CONTENT"],
                          'event_rewards': [],  # 未完成的事件奖励,留空即可
                          '开始游戏和准备就绪按钮的坐标': [1742, 931],
                          '段位重置按钮的坐标': [1468, 843],
@@ -1799,6 +1938,7 @@ if __name__ == '__main__':
     adv_dialog = AdvancedParameter()
     tf_widget = TipForm()
     shl_dialog = ShowLog()
+    debug_dialog = DebugTool()
 
     # 配置文件参数
     cpci_keys = [
