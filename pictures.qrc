@@ -1,0 +1,26 @@
+<RCC>
+  <qresource prefix="mainwindow">
+    <file>picture/dbdwindow.png</file>
+  </qresource>
+  <qresource prefix="log">
+    <file>picture/log.png</file>
+  </qresource>
+  <qresource prefix="advanced">
+    <file>picture/advanced.png</file>
+  </qresource>
+  <qresource prefix="edit">
+    <file>picture/edit.png</file>
+  </qresource>
+  <qresource prefix="debug">
+    <file>picture/tool.png</file>
+  </qresource>
+  <qresource prefix="select">
+    <file>picture/choose.png</file>
+  </qresource>
+  <qresource prefix="trans">
+    <file>picture/transEN.qm</file>
+  </qresource>
+  <qresource prefix="github">
+    <file>picture/github.png</file>
+  </qresource>
+</RCC>

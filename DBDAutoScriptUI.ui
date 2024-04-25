@@ -859,10 +859,10 @@
            <number>0</number>
           </property>
           <property name="rightMargin">
-           <number>0</number>
+           <number>2</number>
           </property>
           <property name="bottomMargin">
-           <number>0</number>
+           <number>2</number>
           </property>
           <item alignment="Qt::AlignBottom">
            <widget class="QLabel" name="lb_version">
@@ -888,8 +888,8 @@
            <widget class="QPushButton" name="pb_github">
             <property name="minimumSize">
              <size>
-              <width>30</width>
-              <height>30</height>
+              <width>33</width>
+              <height>33</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -902,18 +902,24 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">QPushButton {
-	border-image: url(picture/Github.bmp);
-	border-radius: 5px;
-}
-QPushButton:hover {
-	border-image: url(picture/Github.bmp);
-	border-radius: 5px;
-	background-color: #F0F0F0;
+             <string notr="true">QPushButton {  
+    border: none; /* 移除默认边框 */  
+    border-radius: 10px; /* 设置圆角半径，根据需要调整 */  
+    background-color: rgb(240, 240, 240); /* 设置背景颜色 */  
 }</string>
             </property>
             <property name="text">
              <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="pictures.qrc">
+              <normaloff>:/github/picture/github.png</normaloff>:/github/picture/github.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>45</width>
+              <height>45</height>
+             </size>
             </property>
            </widget>
           </item>
@@ -926,7 +932,9 @@ QPushButton:hover {
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="pictures.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>rb_survivor</sender>

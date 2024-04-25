@@ -20,6 +20,8 @@ import win32con
 import win32gui
 import keyboard
 import logging
+import pictures_rc  # 必需模块，隐性调用
+from simpleaudio import WaveObject
 from configparser import ConfigParser
 from operator import lt, eq, gt, ge, ne, floordiv, mod
 from PIL import Image
@@ -34,7 +36,6 @@ from TipForm import Ui_TipForm
 from ShowLog import Ui_ShowLogDialog
 from DebugTool import Ui_DebugDialog
 from keyboard_operation import key_down, key_up
-from simpleaudio import WaveObject
 from typing import Callable
 
 
@@ -89,7 +90,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
         self.main_ui = Ui_MainWindow()
         self.trans = QTranslator()
         self.main_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\dbdwindow.png"))
+        self.setWindowIcon(QIcon(":/mainwindow/picture/dbdwindow.png"))
 
         self.init_signals()
 
@@ -123,7 +124,8 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
     def github():
         webbrowser.open("https://github.com/maskrs/DBD_AFK_TOOL")
 
-    def pb_select_cfg_click(self):
+    @staticmethod
+    def pb_select_cfg_click():
         sel_dialog.select_ui.retranslateUi(sel_dialog)
         sel_dialog.exec_()
 
@@ -149,7 +151,7 @@ class DbdWindow(QMainWindow, Ui_MainWindow):
 
     def rb_english_change(self):
         # 导入语言包，english是翻译的.qm文件
-        self.trans.load(TRANSLATE_PATH)
+        self.trans.load(":trans/picture/transEN.qm")
         _app = QApplication.instance()
         _app.installTranslator(self.trans)
         self.main_ui.retranslateUi(self)
@@ -202,7 +204,7 @@ class SelectWindow(QDialog, Ui_Dialog):
         super().__init__()
         self.select_ui = Ui_Dialog()
         self.select_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\choose.png"))
+        self.setWindowIcon(QIcon(":select/picture/choose.png"))
         self.select_ui.pb_all.clicked.connect(self.pb_select_all_click)
         self.select_ui.pb_invert.clicked.connect(self.pb_invert_click)
         self.select_ui.pb_save.clicked.connect(self.pb_save_click)
@@ -243,7 +245,7 @@ class AdvancedParameter(QDialog, Ui_AdvancedWindow):
         super().__init__()
         self.advanced_ui = Ui_AdvancedWindow()
         self.advanced_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\advanced.png"))
+        self.setWindowIcon(QIcon(":advanced/picture/advanced.png"))
         # 控件到设置键的反向映射
         self.reverse_mapping = {
             self.advanced_ui.sb_maxenter: '最大换行次数',
@@ -423,7 +425,7 @@ class TipForm(QWidget, Ui_TipForm):
         super().__init__()
         self.tipform_ui = Ui_TipForm()
         self.tipform_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\edit.png"))
+        self.setWindowIcon(QIcon(":edit/picture/edit.png"))
 
         self.init_signals()
 
@@ -531,7 +533,7 @@ class ShowLog(QDialog, Ui_ShowLogDialog):
         super().__init__()
         self.showlog_ui = Ui_ShowLogDialog()
         self.showlog_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\log.png"))
+        self.setWindowIcon(QIcon(":log/picture/log.png"))
 
     def loading_settings(self):
         try:
@@ -551,7 +553,7 @@ class DebugTool(QDialog, Ui_DebugDialog):
         super().__init__()
         self.debugtool_ui = Ui_DebugDialog()
         self.debugtool_ui.setupUi(self)
-        self.setWindowIcon(QIcon("picture\\tool.png"))
+        self.setWindowIcon(QIcon(":debug/picture/tool.png"))
 
         self.init_signals()
 
@@ -1017,11 +1019,15 @@ def listen_key():
         if not pause:
             # 播放WAV文件
             play_pau.play()
+            if dbd_window.main_ui.cb_debug.isChecked():
+                log.info(f"DEBUG - 脚本已暂停")
             pause = True
             pause_event.clear()
         elif pause:
             # 播放WAV文件
             play_res.play()
+            if dbd_window.main_ui.cb_debug.isChecked():
+                log.info(f"DEBUG - 脚本已恢复")
             pause = False
             pause_event.set()
         try:
@@ -1062,7 +1068,10 @@ def ocr_range_inspection(identification_key: str,
     def decorator(func):
         @functools.wraps(func)
         def wrapper():
-            x1, y1, x2, y2 = self_defined_args[capture_range]
+            x1 = self_defined_args[capture_range][0]
+            y1 = self_defined_args[capture_range][1]
+            x2 = self_defined_args[capture_range][2]
+            y2 = self_defined_args[capture_range][3]
             threshold = self_defined_args[min_sum_name][0]
             threshold_high = self_defined_args[min_sum_name][1]
             keywords = self_defined_args[identification_key]
@@ -1413,7 +1422,7 @@ def reconnect() -> bool:
                 moveclick(self_defined_args['结算页继续按钮坐标'][0], self_defined_args['结算页继续按钮坐标'][1])
                 moveclick(10, 10)  # 避免遮挡
                 main_quit = True
-            elif starthall():
+            if starthall() or readyhall():
                 main_quit = True
         log.info(f"重连完成···断线")
         return True
@@ -1882,6 +1891,16 @@ def afk() -> None:
             return
 
 
+def resource_path(relative_path):
+    try:
+        # PyInstaller创建的临时文件夹
+        base_path = sys._MEIPASS
+    except Exception:
+        # 如果不是通过PyInstaller运行，则使用当前工作目录
+        base_path = os.path.join(BASE_DIR, "picture")
+
+    return os.path.join(base_path, relative_path)
+
 if __name__ == '__main__':
     BASE_DIR = os.path.dirname(os.path.realpath(sys.argv[0]))
     CHECK_PATH = os.path.join(BASE_DIR, "tesseract-ocr")
@@ -1895,12 +1914,11 @@ if __name__ == '__main__':
     SEARCH_PATH_EN = os.path.join(BASE_DIR, "searchfile_en.txt")
     CUSTOM_KILLER_PATH = os.path.join(BASE_DIR, "custom_killer.txt")
     SDAGRS_PATH = os.path.join(BASE_DIR, "SDargs.json")
-    TRANSLATE_PATH = os.path.join(BASE_DIR, "picture\\transEN.qm")
     LOG_PATH = os.path.join(BASE_DIR, "debug_data.log")
-    play_str = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\start.wav"))
-    play_pau = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\pause.wav"))
-    play_res = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\resume.wav"))
-    play_end = WaveObject.from_wave_file(os.path.join(BASE_DIR, "picture\\close.wav"))
+    play_str = WaveObject.from_wave_file(resource_path("start.wav"))
+    play_pau = WaveObject.from_wave_file(resource_path("pause.wav"))
+    play_res = WaveObject.from_wave_file(resource_path("resume.wav"))
+    play_end = WaveObject.from_wave_file(resource_path("close.wav"))
     hwnd = win32gui.FindWindow(None, u"DeadByDaylight  ")
 
     # 自定义参数
