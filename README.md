@@ -60,7 +60,7 @@
 - 快捷启动`ALT + HOME`  
 - 快捷关闭`ALT + END`  
 
-### [视频演示](https://www.bilibili.com/video/BV17r421G73N/?spm_id_from=333.999.0.0&vd_source=644e6fac1a9e2fe98505b6f9c09657ec)  
+### [视频演示](https://www.bilibili.com/video/BV1RD42137cV/?vd_source=644e6fac1a9e2fe98505b6f9c09657ec)  
 
 ### [常见问题解答与故障排除](https://github.com/maskrs/DBD_AFK_TOOL/wiki)
 
