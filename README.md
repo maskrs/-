@@ -1,4 +1,7 @@
 # &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;[黎明杀机挂机工具【DBD_AFK_TOOL】   ](https://x06w8gh3wwh.feishu.cn/wiki/JKjhwJBNFi6pj5kBoB1cS7HGnkU?from=from_copylink)
+
+# 请转移至新仓库：https://github.com/maskrs/DBD_AFK_TOOL-Pro  
+
 ## ※ 注意：挂机行为存在被BAN风险，任何后果与本工具无关。  
 |工具功能|
 |  :----        |
