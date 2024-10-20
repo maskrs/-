@@ -1,0 +1,18 @@
+# ingore irrelevant folder
+/tesseract-ocr
+/__pycache__
+/UI/__pycache__
+/Utils/__pycache__
+/build
+/dist
+/test
+/.venv
+/.vscode
+
+# ignore irrelevant files
+/*.cfg
+/*.log
+/*.spec
+/maintest.py
+/main.py.bak
+/inputbox.py
