@@ -1,18 +1,28 @@
-# ingore irrelevant folder
-/tesseract-ocr
-/__pycache__
-/UI/__pycache__
-/Utils/__pycache__
-/build
-/dist
-/test
-/.venv
-/.vscode
+# This file is used to specify which files or directories to ignore when committing to the repository.
 
-# ignore irrelevant files
-/*.cfg
-/*.log
-/*.spec
-/maintest.py
-/main.py.bak
-/inputbox.py
+# Ignore all files in the directory named __pycache__
+__pycache__/
+
+# Ignore all files in the directory named tesseract-ocr/
+tesseract-ocr/
+
+# Ignore all files in the directory named venv/ and .vscode/
+.venv/
+.vscode
+.vscode/settings.json
+
+# Ignore all files in the directory named build/ and dist/
+build/
+dist/
+
+# Ignore all files in the directory named test/
+test/
+maintest.py
+
+# Ignore any file with the following extensions:
+*.cfg
+*.spec
+*.log
+*.txt
+SDargs.json
+inputbox.py
